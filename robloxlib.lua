@@ -52,7 +52,8 @@ function MyRobloxLib.Menu:CreateMenu(title)
     contentFrame.Parent = mainFrame
     contentFrame.Size = UDim2.new(1, 0, 1, -40)
     contentFrame.Position = UDim2.new(0, 0, 0, 40)
-    contentFrame.BackgroundTransparency = 1
+    contentFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30) -- Устанавливаем цвет фона
+    contentFrame.BackgroundTransparency = 0.1 -- Устанавливаем прозрачность
     contentFrame.ClipsDescendants = true
     
     local menu = {
@@ -152,7 +153,8 @@ function MyRobloxLib.Menu:AddTab(menu, name)
     local content = Instance.new("Frame")
     content.Parent = menu.ContentFrame
     content.Size = UDim2.new(1, 0, 1, 0)
-    content.BackgroundTransparency = 1
+    content.BackgroundColor3 = Color3.fromRGB(20, 20, 30) -- Устанавливаем цвет фона
+    content.BackgroundTransparency = 0.1 -- Устанавливаем прозрачность
     content.Visible = false
     
     local tab = {Button = tabButton, Underline = underline, Content = content, Elements = {}}
