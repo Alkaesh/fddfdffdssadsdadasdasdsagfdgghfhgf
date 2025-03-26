@@ -27,11 +27,10 @@ function MyRobloxLib.Menu:CreateMenu(title)
     mainFrame.Parent = screenGui
     mainFrame.Size = UDim2.new(0, 600, 0, 400)
     mainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30) -- Темный фон с фиолетовым оттенком
+    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
     mainFrame.BackgroundTransparency = 0.1
     mainFrame.ClipsDescendants = true
     
-    -- Полупрозрачный градиент
     local gradient = Instance.new("UIGradient")
     gradient.Parent = mainFrame
     gradient.Color = ColorSequence.new({
@@ -40,20 +39,18 @@ function MyRobloxLib.Menu:CreateMenu(title)
     })
     gradient.Rotation = 90
     
-    -- Вкладки вверху
     local tabFrame = Instance.new("Frame")
     tabFrame.Parent = mainFrame
     tabFrame.Size = UDim2.new(1, 0, 0, 40)
     tabFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
     tabFrame.BackgroundTransparency = 0.1
     
-    -- Контейнер для контента
     local contentFrame = Instance.new("Frame")
     contentFrame.Parent = mainFrame
     contentFrame.Size = UDim2.new(1, 0, 1, -40)
     contentFrame.Position = UDim2.new(0, 0, 0, 40)
-    contentFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30) -- Устанавливаем цвет фона
-    contentFrame.BackgroundTransparency = 0.1 -- Устанавливаем прозрачность
+    contentFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    contentFrame.BackgroundTransparency = 0.1
     contentFrame.ClipsDescendants = true
     
     local menu = {
@@ -67,15 +64,13 @@ function MyRobloxLib.Menu:CreateMenu(title)
         Visible = true
     }
     
-    -- Анимация появления
-    mainFrame.Position = UDim2.new(0.5, -300, 0.5, 200)
+    mainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
     Services.TweenService:Create(
         mainFrame,
         TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
         {Position = UDim2.new(0.5, -300, 0.5, -200)}
     ):Play()
     
-    -- Drag-and-drop
     local dragging, dragStart, startPos
     tabFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -102,7 +97,6 @@ function MyRobloxLib.Menu:CreateMenu(title)
     return menu
 end
 
--- Показать/скрыть меню
 function MyRobloxLib.Menu:ShowMenu(menu)
     if not menu.Visible then
         menu.Visible = true
@@ -121,15 +115,15 @@ function MyRobloxLib.Menu:HideMenu(menu)
         local tween = Services.TweenService:Create(
             menu.MainFrame,
             TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
-            {Position = menu.MainFrame.Position + UDim2.new(0, 0, 0, 400)}
+            {Position = UDim2.new(0.5, -300, 1.5, -200)}
         )
         tween:Play()
-        tween.Completed:Wait()
-        menu.MainFrame.Visible = false
+        tween.Completed:Connect(function()
+            menu.MainFrame.Visible = false
+        end)
     end
 end
 
--- Добавление вкладки (вверху, как в Fatality)
 function MyRobloxLib.Menu:AddTab(menu, name)
     local tabCount = #menu.Tabs
     local tabButton = Instance.new("TextButton")
@@ -142,7 +136,6 @@ function MyRobloxLib.Menu:AddTab(menu, name)
     tabButton.TextSize = 16
     tabButton.Font = Enum.Font.SourceSansBold
     
-    -- Подчеркивание для активной вкладки
     local underline = Instance.new("Frame")
     underline.Parent = tabButton
     underline.Size = UDim2.new(1, 0, 0, 2)
@@ -153,8 +146,8 @@ function MyRobloxLib.Menu:AddTab(menu, name)
     local content = Instance.new("Frame")
     content.Parent = menu.ContentFrame
     content.Size = UDim2.new(1, 0, 1, 0)
-    content.BackgroundColor3 = Color3.fromRGB(20, 20, 30) -- Устанавливаем цвет фона
-    content.BackgroundTransparency = 0.1 -- Устанавливаем прозрачность
+    content.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    content.BackgroundTransparency = 0.1
     content.Visible = false
     
     local tab = {Button = tabButton, Underline = underline, Content = content, Elements = {}}
@@ -169,7 +162,6 @@ function MyRobloxLib.Menu:AddTab(menu, name)
         tab.Underline.Visible = true
     end)
     
-    -- Устанавливаем первую вкладку активной вручную
     if tabCount == 0 then
         menu.CurrentTab = tab
         tab.Content.Visible = true
@@ -180,7 +172,6 @@ function MyRobloxLib.Menu:AddTab(menu, name)
     return tab
 end
 
--- Добавление секции (подзаголовка, как в Fatality)
 function MyRobloxLib.Menu:AddSection(tab, name)
     local elementCount = #tab.Elements
     local sectionLabel = Instance.new("TextLabel")
@@ -198,7 +189,6 @@ function MyRobloxLib.Menu:AddSection(tab, name)
     return sectionLabel
 end
 
--- Добавление кнопки
 function MyRobloxLib.Menu:AddButton(tab, text, callback)
     local elementCount = #tab.Elements
     local button = Instance.new("TextButton")
@@ -216,7 +206,6 @@ function MyRobloxLib.Menu:AddButton(tab, text, callback)
     return button
 end
 
--- Добавление переключателя
 function MyRobloxLib.Menu:AddToggle(tab, text, default, callback)
     local elementCount = #tab.Elements
     local frame = Instance.new("Frame")
@@ -256,7 +245,6 @@ function MyRobloxLib.Menu:AddToggle(tab, text, default, callback)
     return toggle
 end
 
--- Добавление слайдера
 function MyRobloxLib.Menu:AddSlider(tab, text, min, max, default, callback)
     local elementCount = #tab.Elements
     local frame = Instance.new("Frame")
@@ -314,7 +302,6 @@ function MyRobloxLib.Menu:AddSlider(tab, text, min, max, default, callback)
     return frame
 end
 
--- Добавление текстового поля
 function MyRobloxLib.Menu:AddTextBox(tab, text, default, callback)
     local elementCount = #tab.Elements
     local frame = Instance.new("Frame")
@@ -353,74 +340,6 @@ function MyRobloxLib.Menu:AddTextBox(tab, text, default, callback)
     return textBox
 end
 
--- Добавление выпадающего списка
-function MyRobloxLib.Menu:AddDropdown(tab, text, options, default, callback)
-    local elementCount = #tab.Elements
-    local frame = Instance.new("Frame")
-    frame.Parent = tab.Content
-    frame.Size = UDim2.new(0.95, 0, 0, 25)
-    frame.Position = UDim2.new(0.025, 0, 0, 10 + (elementCount * 30))
-    frame.BackgroundTransparency = 1
-    
-    local label = Instance.new("TextLabel")
-    label.Parent = frame
-    label.Size = UDim2.new(0.5, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.TextSize = 12
-    label.Font = Enum.Font.SourceSans
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    
-    local dropdownButton = Instance.new("TextButton")
-    dropdownButton.Parent = frame
-    dropdownButton.Size = UDim2.new(0, 100, 0, 20)
-    dropdownButton.Position = UDim2.new(1, -100, 0, 2.5)
-    dropdownButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    dropdownButton.Text = default or options[1]
-    dropdownButton.TextColor3 = Color3.new(1, 1, 1)
-    dropdownButton.TextSize = 12
-    dropdownButton.Font = Enum.Font.SourceSans
-    
-    local dropdownFrame = Instance.new("Frame")
-    dropdownFrame.Parent = frame
-    dropdownFrame.Size = UDim2.new(0, 100, 0, 0)
-    dropdownFrame.Position = UDim2.new(1, -100, 0, 25)
-    dropdownFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    dropdownFrame.ClipsDescendants = true
-    dropdownFrame.Visible = false
-    
-    local items = {}
-    for i, option in ipairs(options) do
-        local item = Instance.new("TextButton")
-        item.Parent = dropdownFrame
-        item.Size = UDim2.new(1, 0, 0, 20)
-        item.Position = UDim2.new(0, 0, 0, (i - 1) * 20)
-        item.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        item.Text = option
-        item.TextColor3 = Color3.new(1, 1, 1)
-        item.TextSize = 12
-        item.Font = Enum.Font.SourceSans
-        item.MouseButton1Click:Connect(function()
-            dropdownButton.Text = option
-            dropdownFrame.Visible = false
-            dropdownFrame.Size = UDim2.new(0, 100, 0, 0)
-            callback(option)
-        end)
-        table.insert(items, item)
-    end
-    
-    dropdownButton.MouseButton1Click:Connect(function()
-        local isOpen = not dropdownFrame.Visible
-        dropdownFrame.Visible = isOpen
-        dropdownFrame.Size = isOpen and UDim2.new(0, 100, 0, #options * 20) or UDim2.new(0, 100, 0, 0)
-    end)
-    
-    table.insert(tab.Elements, frame)
-    return dropdownButton
-end
-
--- Добавление колорпикера
 function MyRobloxLib.Menu:AddColorPicker(tab, text, defaultColor, callback)
     local elementCount = #tab.Elements
     local frame = Instance.new("Frame")
@@ -448,7 +367,7 @@ function MyRobloxLib.Menu:AddColorPicker(tab, text, defaultColor, callback)
     local pickerFrame = Instance.new("Frame")
     pickerFrame.Parent = frame
     pickerFrame.Size = UDim2.new(0, 200, 0, 0)
-    pickerFrame.Position = UDim2.new(1, -200, 0, 25)
+    pickerFrame.Position = UDim2.new(0, 0, 1, 0) -- Перемещаем ниже элемента
     pickerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     pickerFrame.ClipsDescendants = true
     pickerFrame.Visible = false
@@ -457,7 +376,7 @@ function MyRobloxLib.Menu:AddColorPicker(tab, text, defaultColor, callback)
     palette.Parent = pickerFrame
     palette.Size = UDim2.new(0, 180, 0, 100)
     palette.Position = UDim2.new(0, 10, 0, 10)
-    palette.Image = "rbxassetid://698052001"
+    palette.Image = "rbxassetid://698052001" -- Палитра цветов
     palette.BackgroundTransparency = 1
     
     local cursor = Instance.new("Frame")
