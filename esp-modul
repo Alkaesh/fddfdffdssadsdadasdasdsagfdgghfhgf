@@ -71,7 +71,7 @@ local function createESP(player)
     healthLabel.TextColor3 = Color3.new(1, 1, 1)
     healthLabel.TextSize = ESP.textSize
     healthLabel.Font = Enum.Font.Gotham
-    healthLabel.TextStrokeTransparency = 0.5
+    healthLabel.TextStrokeTransparency = 0.5 -- Исправлено: nameLabel на healthLabel
 
     -- Создаем Box ESP (коробку вокруг игрока)
     local box = Instance.new("BoxHandleAdornment")
