@@ -1,0 +1,335 @@
+-- MainScript.lua
+
+-- Подгрузка библиотеки по ссылке
+local Lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
+
+-- Подгрузка ESP-модуля
+local ESP
+local success, err = pcall(function()
+    ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/esp-modul"))()
+end)
+if not success or not ESP then
+    Lib.Menu:Notify("Failed to load ESP module! Error: " .. (err or "Unknown error"), 5)
+else
+    Lib.Menu:Notify("ESP module loaded successfully", 3)
+end
+
+-- Основные сервисы
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- Создаем меню
+local menu = Lib.Menu:CreateMenu("My Cheat")
+
+-- Вкладки
+local mainTab = Lib.Menu:AddTab(menu, "Main")
+local teleportTab = Lib.Menu:AddTab(menu, "Teleport")
+local espTab = ESP and Lib.Menu:AddTab(menu, "ESP") -- Создаем вкладку ESP только если модуль загрузился
+
+-- Переменные для функционала
+local speedEnabled = false
+local jumpEnabled = false
+local currentSpeed = 16
+local currentJumpPower = 50
+local defaultSpeed = 16
+local defaultJumpPower = 50
+local teleportOnClickEnabled = false
+local Clipon = false
+local Stepped
+
+-- Функция для получения персонажа
+local function getCharacter(player)
+    return player.Character
+end
+
+-- Постоянное обновление скорости и прыжка
+RunService.RenderStepped:Connect(function()
+    local character = getCharacter(LocalPlayer)
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            if speedEnabled then
+                humanoid.WalkSpeed = currentSpeed
+            else
+                humanoid.WalkSpeed = defaultSpeed
+            end
+            if jumpEnabled then
+                humanoid.JumpPower = currentJumpPower
+            else
+                humanoid.JumpPower = defaultJumpPower
+            end
+        end
+    end
+end)
+
+-- Функция для Noclip (взята из твоего кода и улучшена)
+local function toggleNoclip(state)
+    Clipon = state
+    if Clipon then
+        Stepped = RunService.Stepped:Connect(function()
+            if Clipon then
+                local character = getCharacter(LocalPlayer)
+                if character then
+                    for _, v in pairs(character:GetChildren()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = false
+                        end
+                    end
+                end
+            else
+                Stepped:Disconnect()
+            end
+        end)
+    else
+        -- При выключении Noclip возвращаем CanCollide в исходное состояние
+        local character = getCharacter(LocalPlayer)
+        if character then
+            for _, v in pairs(character:GetChildren()) do
+                if v:IsA("BasePart") then
+                    v.CanCollide = true
+                end
+            end
+        end
+        if Stepped then
+            Stepped:Disconnect()
+        end
+    end
+end
+
+-- Функция для телепортации к игроку с частичным совпадением ника
+local function teleportToPlayer(partialName)
+    if not partialName or partialName == "" then
+        Lib.Menu:Notify("Please enter a player name!", 3)
+        return
+    end
+
+    -- Приводим введенное имя к нижнему регистру для поиска без учета регистра
+    partialName = partialName:lower()
+    local matchingPlayers = {}
+
+    -- Ищем игроков, чьи ники начинаются с введенной строки
+    for _, player in pairs(Players:GetPlayers()) do
+        local playerNameLower = player.Name:lower()
+        -- Проверяем, начинается ли ник с введенной строки
+        if playerNameLower:sub(1, #partialName) == partialName then
+            table.insert(matchingPlayers, player)
+        end
+    end
+
+    -- Проверяем количество совпадений
+    if #matchingPlayers == 0 then
+        Lib.Menu:Notify("No players found with name starting with: " .. partialName, 3)
+    elseif #matchingPlayers == 1 then
+        -- Если найден только один игрок, телепортируемся к нему
+        local targetPlayer = matchingPlayers[1]
+        local character = getCharacter(LocalPlayer)
+        local targetCharacter = getCharacter(targetPlayer)
+        if character and targetCharacter then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            local targetRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
+            if rootPart and targetRootPart then
+                rootPart.CFrame = targetRootPart.CFrame
+                Lib.Menu:Notify("Teleported to " .. targetPlayer.Name, 3)
+            else
+                Lib.Menu:Notify("Could not teleport: Player or target has no HumanoidRootPart", 3)
+            end
+        else
+            Lib.Menu:Notify("Could not teleport: Player or target character not found", 3)
+        end
+    else
+        -- Если найдено несколько игроков, выводим их имена
+        local playerList = "Multiple players found: "
+        for i, player in ipairs(matchingPlayers) do
+            playerList = playerList .. player.Name
+            if i < #matchingPlayers then
+                playerList = playerList .. ", "
+            end
+        end
+        Lib.Menu:Notify(playerList .. " - please be more specific.", 5)
+    end
+end
+
+-- Функция для Teleport Clip (телепортация вперед с игнорированием стен)
+local function teleportClip()
+    local character = getCharacter(LocalPlayer)
+    if character then
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            -- Временно включаем Noclip для телепортации
+            local wasClipon = Clipon
+            toggleNoclip(true)
+            -- Телепортируемся вперед на 50 studs
+            local forwardDirection = rootPart.CFrame.LookVector
+            rootPart.CFrame = rootPart.CFrame + (forwardDirection * 50)
+            -- Возвращаем Noclip в исходное состояние
+            wait(0.1) -- Небольшая задержка, чтобы телепортация прошла
+            toggleNoclip(wasClipon)
+            Lib.Menu:Notify("Teleported forward (Clip)", 2)
+        else
+            Lib.Menu:Notify("Could not teleport: No HumanoidRootPart found", 3)
+        end
+    else
+        Lib.Menu:Notify("Could not teleport: Character not found", 3)
+    end
+end
+
+-- Функция для телепортации по клику (Left Ctrl + Click)
+local function teleportToClickPosition()
+    local character = getCharacter(LocalPlayer)
+    if not character then
+        Lib.Menu:Notify("Could not teleport: Character not found", 3)
+        return
+    end
+
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then
+        Lib.Menu:Notify("Could not teleport: No HumanoidRootPart found", 3)
+        return
+    end
+
+    -- Получаем позицию клика
+    local mouseHit = Mouse.Hit
+    if mouseHit then
+        -- Временно включаем Noclip для телепортации
+        local wasClipon = Clipon
+        toggleNoclip(true)
+        -- Телепортируемся в точку клика
+        rootPart.CFrame = CFrame.new(mouseHit.Position + Vector3.new(0, 3, 0)) -- Смещаем немного вверх, чтобы не застрять в полу
+        -- Возвращаем Noclip в исходное состояние
+        wait(0.1)
+        toggleNoclip(wasClipon)
+        Lib.Menu:Notify("Teleported to click position", 2)
+    else
+        Lib.Menu:Notify("Could not teleport: Invalid click position", 3)
+    end
+end
+
+-- Обработка Left Ctrl + Click для телепортации
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end -- Игнорируем, если событие обрабатывается игрой (например, чат)
+
+    if teleportOnClickEnabled and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        -- Проверяем, нажат ли Left Ctrl
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            teleportToClickPosition()
+        end
+    end
+end)
+
+-- Секции и элементы для вкладки Main
+Lib.Menu:AddSection(mainTab, "Movement")
+Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, 16, function(value)
+    currentSpeed = value
+    speedEnabled = true
+end)
+Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, 50, function(value)
+    currentJumpPower = value
+    jumpEnabled = true
+end)
+Lib.Menu:AddToggle(mainTab, "Noclip", false, function(state)
+    toggleNoclip(state)
+end)
+
+-- Секции и элементы для вкладки Teleport
+Lib.Menu:AddSection(teleportTab, "Teleport to Player")
+local teleportTextBox = Lib.Menu:AddTextBox(teleportTab, "Player Name (First Letters)", "", function(playerName)
+    teleportToPlayer(playerName)
+end)
+Lib.Menu:AddButton(teleportTab, "Teleport", function()
+    teleportToPlayer(teleportTextBox.Text)
+end)
+
+-- Добавляем Teleport Clip
+Lib.Menu:AddSection(teleportTab, "Teleport Clip")
+Lib.Menu:AddButton(teleportTab, "Teleport Forward (Clip)", function()
+    teleportClip()
+end)
+
+-- Добавляем Teleport on Click
+Lib.Menu:AddSection(teleportTab, "Teleport on Click (Left Ctrl + Click)")
+Lib.Menu:AddToggle(teleportTab, "Enable Teleport on Click", false, function(state)
+    teleportOnClickEnabled = state
+    if state then
+        Lib.Menu:Notify("Teleport on Click enabled (Left Ctrl + Click)", 3)
+    else
+        Lib.Menu:Notify("Teleport on Click disabled", 3)
+    end
+end)
+
+-- Секции и элементы для вкладки ESP (добавляем только если модуль загрузился)
+if ESP then
+    Lib.Menu:AddSection(espTab, "ESP Settings")
+    Lib.Menu:AddToggle(espTab, "Enable ESP", true, function(state)
+        ESP.espEnabled = state
+        if state then
+            Lib.Menu:Notify("ESP Enabled", 3)
+        else
+            Lib.Menu:Notify("ESP Disabled", 3)
+        end
+    end)
+
+    Lib.Menu:AddToggle(espTab, "Enable Team Check", true, function(state)
+        ESP.teamCheckEnabled = state
+        Lib.Menu:Notify("Team Check " .. (state and "Enabled" or "Disabled"), 3)
+    end)
+
+    Lib.Menu:AddToggle(espTab, "Enable Tracers", true, function(state)
+        ESP.tracersEnabled = state
+        Lib.Menu:Notify("Tracers " .. (state and "Enabled" or "Disabled"), 3)
+    end)
+
+    Lib.Menu:AddToggle(espTab, "Tracers From Bottom", false, function(state)
+        ESP.tracerFromBottom = state
+        Lib.Menu:Notify("Tracers From Bottom " .. (state and "Enabled" or "Disabled"), 3)
+    end)
+
+    Lib.Menu:AddSlider(espTab, "ESP Distance", 100, 1000, 500, function(value)
+        ESP.espMaxDistance = value
+        Lib.Menu:Notify("ESP Distance set to " .. value .. " studs", 3)
+    end)
+
+    Lib.Menu:AddSlider(espTab, "Box Transparency", 0, 1, 0.5, function(value)
+        ESP.boxTransparency = value
+        Lib.Menu:Notify("Box Transparency set to " .. value, 3)
+    end)
+
+    Lib.Menu:AddSlider(espTab, "Box Thickness", 0, 0.5, 0.1, function(value)
+        ESP.boxThickness = value
+        Lib.Menu:Notify("Box Thickness set to " .. value, 3)
+    end)
+
+    Lib.Menu:AddSlider(espTab, "Tracer Thickness", 1, 5, 2, function(value)
+        ESP.tracerThickness = value
+        Lib.Menu:Notify("Tracer Thickness set to " .. value, 3)
+    end)
+
+    Lib.Menu:AddSlider(espTab, "Text Size", 8, 20, 10, function(value)
+        ESP.textSize = value
+        Lib.Menu:Notify("Text Size set to " .. value, 3)
+    end)
+
+    Lib.Menu:AddColorPicker(espTab, "Visible Color", ESP.espVisibleColor, function(color)
+        ESP.espVisibleColor = color
+        Lib.Menu:Notify("Visible ESP color updated", 3)
+    end)
+
+    Lib.Menu:AddColorPicker(espTab, "Not Visible Color", ESP.espNotVisibleColor, function(color)
+        ESP.espNotVisibleColor = color
+        Lib.Menu:Notify("Not Visible ESP color updated", 3)
+    end)
+end
+
+-- Горячая клавиша для показа/скрытия меню (Right Control)
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightControl then
+        if menu.Visible then
+            Lib.Menu:HideMenu(menu)
+        else
+            Lib.Menu:ShowMenu(menu)
+        end
+    end
+end)
