@@ -110,7 +110,7 @@ function MyRobloxLib.Menu:ShowMenu(menu)
         Services.TweenService:Create(
             menu.MainFrame,
             TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-            {Position = menu.MainFrame.Position + UDim2.new(0, 0, 0, -400)}
+            {Position = UDim2.new(0.5, -300, 0.5, -200)}
         ):Play()
     end
 end
@@ -169,8 +169,11 @@ function MyRobloxLib.Menu:AddTab(menu, name)
         tab.Underline.Visible = true
     end)
     
+    -- Устанавливаем первую вкладку активной вручную
     if tabCount == 0 then
-        tabButton:Activate()
+        menu.CurrentTab = tab
+        tab.Content.Visible = true
+        tab.Underline.Visible = true
     end
     
     table.insert(menu.Tabs, tab)
