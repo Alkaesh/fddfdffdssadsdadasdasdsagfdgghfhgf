@@ -16,6 +16,76 @@ end
 -- Секция GUI
 MyRobloxLib.Menu = {}
 
+-- Система уведомлений
+local notificationContainer = nil
+local function setupNotifications()
+    if not notificationContainer then
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Parent = getPlayer():WaitForChild("PlayerGui")
+        screenGui.Name = "Notifications"
+        screenGui.ResetOnSpawn = false
+        
+        notificationContainer = Instance.new("Frame")
+        notificationContainer.Parent = screenGui
+        notificationContainer.Size = UDim2.new(0, 300, 1, 0)
+        notificationContainer.Position = UDim2.new(1, -310, 0, 10)
+        notificationContainer.BackgroundTransparency = 1
+    end
+end
+
+function MyRobloxLib.Menu:Notify(message, duration)
+    setupNotifications()
+    
+    local notification = Instance.new("Frame")
+    notification.Parent = notificationContainer
+    notification.Size = UDim2.new(1, 0, 0, 30)
+    notification.Position = UDim2.new(0, 0, 0, (#notificationContainer:GetChildren() - 1) * 40)
+    notification.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    notification.BackgroundTransparency = 0.2
+    notification.BorderSizePixel = 0
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Parent = notification
+    textLabel.Size = UDim2.new(1, -10, 1, 0)
+    textLabel.Position = UDim2.new(0, 5, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = message
+    textLabel.TextColor3 = Color3.new(1, 1, 1)
+    textLabel.TextSize = 14
+    textLabel.Font = Enum.Font.SourceSans
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    -- Анимация появления
+    notification.Position = UDim2.new(1, 0, 0, (#notificationContainer:GetChildren() - 1) * 40)
+    Services.TweenService:Create(
+        notification,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+        {Position = UDim2.new(0, 0, 0, (#notificationContainer:GetChildren() - 1) * 40)}
+    ):Play()
+    
+    -- Исчезновение через заданное время
+    duration = duration or 3
+    spawn(function()
+        wait(duration)
+        Services.TweenService:Create(
+            notification,
+            TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
+            {Position = UDim2.new(1, 0, 0, notification.Position.Y.Offset)}
+        ):Play()
+        wait(0.3)
+        notification:Destroy()
+        
+        -- Обновляем позиции оставшихся уведомлений
+        for i, notif in ipairs(notificationContainer:GetChildren()) do
+            Services.TweenService:Create(
+                notif,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, (i - 1) * 40)}
+            ):Play()
+        end
+    end)
+end
+
 -- Создание меню в стиле Fatality
 function MyRobloxLib.Menu:CreateMenu(title)
     local screenGui = Instance.new("ScreenGui")
@@ -358,7 +428,6 @@ function MyRobloxLib.Menu:AddColorPicker(tab, text, defaultColor, callback)
     label.Font = Enum.Font.SourceSans
     label.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- Заменяем Frame на TextButton для поддержки MouseButton1Click
     local colorDisplay = Instance.new("TextButton")
     colorDisplay.Parent = frame
     colorDisplay.Size = UDim2.new(0, 40, 0, 20)
