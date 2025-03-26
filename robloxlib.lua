@@ -358,16 +358,18 @@ function MyRobloxLib.Menu:AddColorPicker(tab, text, defaultColor, callback)
     label.Font = Enum.Font.SourceSans
     label.TextXAlignment = Enum.TextXAlignment.Left
     
-    local colorDisplay = Instance.new("Frame")
+    -- Заменяем Frame на TextButton для поддержки MouseButton1Click
+    local colorDisplay = Instance.new("TextButton")
     colorDisplay.Parent = frame
     colorDisplay.Size = UDim2.new(0, 40, 0, 20)
     colorDisplay.Position = UDim2.new(1, -40, 0, 2.5)
     colorDisplay.BackgroundColor3 = defaultColor
+    colorDisplay.Text = ""
     
     local pickerFrame = Instance.new("Frame")
     pickerFrame.Parent = frame
     pickerFrame.Size = UDim2.new(0, 200, 0, 0)
-    pickerFrame.Position = UDim2.new(0, 0, 1, 0) -- Перемещаем ниже элемента
+    pickerFrame.Position = UDim2.new(0, 0, 1, 0)
     pickerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     pickerFrame.ClipsDescendants = true
     pickerFrame.Visible = false
@@ -376,7 +378,7 @@ function MyRobloxLib.Menu:AddColorPicker(tab, text, defaultColor, callback)
     palette.Parent = pickerFrame
     palette.Size = UDim2.new(0, 180, 0, 100)
     palette.Position = UDim2.new(0, 10, 0, 10)
-    palette.Image = "rbxassetid://698052001" -- Палитра цветов
+    palette.Image = "rbxassetid://698052001"
     palette.BackgroundTransparency = 1
     
     local cursor = Instance.new("Frame")
