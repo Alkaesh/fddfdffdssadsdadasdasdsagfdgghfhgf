@@ -287,7 +287,7 @@ if ESP then
         Lib.Menu:Notify("Tracers From Bottom " .. (state and "Enabled" or "Disabled"), 3)
     end)
 
-    Lib.Menu:AddSlider(espTab, "ESP Distance", 100, 1000, 500, function(value)
+    Lib.Menu:AddSlider(espTab, "ESP Distance", 100, 5000, 1000, function(value)
         ESP.espMaxDistance = value
         Lib.Menu:Notify("ESP Distance set to " .. value .. " studs", 3)
     end)
