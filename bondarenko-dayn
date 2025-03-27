@@ -11,7 +11,7 @@ end)
 if not success or not ESP then
     Lib.Menu:Notify("Failed to load ESP module! Error: " .. (err or "Unknown error"), 5)
 else
-    Lib.Menu:Notify("ESP module loaded successfully", 3)
+    Lib.Menu:Notify("ESP module loaded successfully!", 3)
 end
 
 -- Подгрузка Fly-модуля
@@ -22,7 +22,7 @@ end)
 if not success or not Fly then
     Lib.Menu:Notify("Failed to load Fly module! Error: " .. (err or "Unknown error"), 5)
 else
-    Lib.Menu:Notify("Fly module loaded successfully", 3)
+    Lib.Menu:Notify("Fly module loaded successfully!", 3)
 end
 
 -- Основные сервисы
@@ -34,7 +34,7 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
 -- Создаем меню
-local menu = Lib.Menu:CreateMenu("My Cheat")
+local menu = Lib.Menu:CreateMenu("My Cheat Menu")
 
 -- Вкладки
 local mainTab = Lib.Menu:AddTab(menu, "Main")
@@ -51,8 +51,9 @@ local currentJumpPower = 50 -- Текущее применяемое значе�
 local defaultSpeed = 16 -- Дефолтное значение скорости (зависит от сервера)
 local defaultJumpPower = 50 -- Дефолтное значение прыжка (зависит от сервера)
 local teleportOnClickEnabled = false
-local Clipon = false
-local Stepped
+local teleportKey = Enum.KeyCode.LeftControl -- Клавиша для телепорта по клику
+local isNoclipEnabled = false
+local noclipConnection -- Для хранения соединения RunService.Stepped
 local antiAfkEnabled = false
 
 -- Переменные для управления уведомлениями (debounce)
@@ -162,49 +163,54 @@ local function toggleAntiAfk(state)
                 wait(10)
             end
         end)
-        Lib.Menu:Notify("Anti-AFK Enabled", 3)
+        notifyWithCooldown("Anti-AFK Enabled", 3)
     else
-        Lib.Menu:Notify("Anti-AFK Disabled", 3)
+        notifyWithCooldown("Anti-AFK Disabled", 3)
     end
 end
 
 -- Функция для Noclip
 local function toggleNoclip(state)
-    Clipon = state
-    if Clipon then
-        Stepped = RunService.Stepped:Connect(function()
-            if Clipon then
+    isNoclipEnabled = state
+    if isNoclipEnabled then
+        noclipConnection = RunService.Stepped:Connect(function()
+            if isNoclipEnabled then
                 local character = getCharacter(LocalPlayer)
                 if character then
-                    for _, v in pairs(character:GetChildren()) do
-                        if v:IsA("BasePart") then
-                            v.CanCollide = false
+                    for _, part in pairs(character:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
                         end
                     end
                 end
             else
-                Stepped:Disconnect()
+                if noclipConnection then
+                    noclipConnection:Disconnect()
+                end
             end
         end)
+        notifyWithCooldown("Noclip Enabled", 3)
     else
         local character = getCharacter(LocalPlayer)
         if character then
-            for _, v in pairs(character:GetChildren()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = true
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
                 end
             end
         end
-        if Stepped then
-            Stepped:Disconnect()
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
         end
+        notifyWithCooldown("Noclip Disabled", 3)
     end
 end
 
 -- Функция для телепортации к игроку с частичным совпадением ника
 local function teleportToPlayer(partialName)
     if not partialName or partialName == "" then
-        Lib.Menu:Notify("Please enter a player name!", 3)
+        notifyWithCooldown("Please enter a player name!", 3)
         return
     end
 
@@ -219,7 +225,7 @@ local function teleportToPlayer(partialName)
     end
 
     if #matchingPlayers == 0 then
-        Lib.Menu:Notify("No players found with name starting with: " .. partialName, 3)
+        notifyWithCooldown("No players found with name starting with: " .. partialName, 3)
     elseif #matchingPlayers == 1 then
         local targetPlayer = matchingPlayers[1]
         local character = getCharacter(LocalPlayer)
@@ -229,12 +235,12 @@ local function teleportToPlayer(partialName)
             local targetRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
             if rootPart and targetRootPart then
                 rootPart.CFrame = targetRootPart.CFrame
-                Lib.Menu:Notify("Teleported to " .. targetPlayer.Name, 3)
+                notifyWithCooldown("Teleported to " .. targetPlayer.Name, 3)
             else
-                Lib.Menu:Notify("Could not teleport: Player or target has no HumanoidRootPart", 3)
+                notifyWithCooldown("Could not teleport: Player or target has no HumanoidRootPart", 3)
             end
         else
-            Lib.Menu:Notify("Could not teleport: Player or target character not found", 3)
+            notifyWithCooldown("Could not teleport: Player or target character not found", 3)
         end
     else
         local playerList = "Multiple players found: "
@@ -244,50 +250,51 @@ local function teleportToPlayer(partialName)
                 playerList = playerList .. ", "
             end
         end
-        Lib.Menu:Notify(playerList .. " - please be more specific.", 5)
+        notifyWithCooldown(playerList .. " - please be more specific.", 5)
     end
 end
 
--- Функция для телепортации по клику (Left Ctrl + Click)
+-- Функция для телепортации по клику
 local function teleportToClickPosition()
     local character = getCharacter(LocalPlayer)
     if not character then
-        Lib.Menu:Notify("Could not teleport: Character not found", 3)
+        notifyWithCooldown("Could not teleport: Character not found", 3)
         return
     end
 
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then
-        Lib.Menu:Notify("Could not teleport: No HumanoidRootPart found", 3)
+        notifyWithCooldown("Could not teleport: No HumanoidRootPart found", 3)
         return
     end
 
     local mouseHit = Mouse.Hit
     if mouseHit then
-        local wasClipon = Clipon
+        local wasNoclipEnabled = isNoclipEnabled
         toggleNoclip(true)
         rootPart.CFrame = CFrame.new(mouseHit.Position + Vector3.new(0, 3, 0))
         wait(0.1)
-        toggleNoclip(wasClipon)
-        Lib.Menu:Notify("Teleported to click position", 2)
+        toggleNoclip(wasNoclipEnabled)
+        notifyWithCooldown("Teleported to click position", 2)
     else
-        Lib.Menu:Notify("Could not teleport: Invalid click position", 3)
+        notifyWithCooldown("Could not teleport: Invalid click position", 3)
     end
 end
 
--- Обработка Left Ctrl + Click для телепортации
+-- Обработка клика для телепортации
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then return end
 
     if teleportOnClickEnabled and input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+        if UserInputService:IsKeyDown(teleportKey) then
             teleportToClickPosition()
         end
     end
 end)
 
--- Секции и элементы для вкладки Main
-Lib.Menu:AddSection(mainTab, "Movement")
+-- === Вкладка Main ===
+-- Секция: Speed and Jump
+Lib.Menu:AddSection(mainTab, "Speed and Jump")
 Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
     speedEnabled = state
     if state then
@@ -297,9 +304,13 @@ Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
             local humanoid = character:FindFirstChild("Humanoid")
             if humanoid then
                 humanoid.WalkSpeed = currentSpeed
+                notifyWithCooldown("Speedhack Enabled - Speed: " .. currentSpeed, 3)
+            else
+                notifyWithCooldown("Speedhack failed: Humanoid not found", 3)
             end
+        else
+            notifyWithCooldown("Speedhack failed: Character not found", 3)
         end
-        Lib.Menu:Notify("Speedhack Enabled", 3)
     else
         currentSpeed = defaultSpeed
         local character = getCharacter(LocalPlayer)
@@ -307,9 +318,9 @@ Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
             local humanoid = character:FindFirstChild("Humanoid")
             if humanoid then
                 humanoid.WalkSpeed = defaultSpeed
+                notifyWithCooldown("Speedhack Disabled - Speed reset to: " .. defaultSpeed, 3)
             end
         end
-        Lib.Menu:Notify("Speedhack Disabled", 3)
     end
 end)
 Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, defaultSpeed, function(value)
@@ -321,7 +332,7 @@ Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, defaultSpeed, function(value)
             local humanoid = character:FindFirstChild("Humanoid")
             if humanoid then
                 humanoid.WalkSpeed = currentSpeed
-                notifyWithCooldown("Speed set to " .. value, 3)
+                notifyWithCooldown("Speed set to: " .. value, 3)
             else
                 notifyWithCooldown("Speedhack failed: Humanoid not found", 3)
             end
@@ -341,9 +352,13 @@ Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
             local humanoid = character:FindFirstChild("Humanoid")
             if humanoid then
                 humanoid.JumpPower = currentJumpPower
+                notifyWithCooldown("Jump Power Enabled - Jump: " .. currentJumpPower, 3)
+            else
+                notifyWithCooldown("Jump Power failed: Humanoid not found", 3)
             end
+        else
+            notifyWithCooldown("Jump Power failed: Character not found", 3)
         end
-        Lib.Menu:Notify("Jump Power Enabled", 3)
     else
         currentJumpPower = defaultJumpPower
         local character = getCharacter(LocalPlayer)
@@ -351,9 +366,9 @@ Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
             local humanoid = character:FindFirstChild("Humanoid")
             if humanoid then
                 humanoid.JumpPower = defaultJumpPower
+                notifyWithCooldown("Jump Power Disabled - Jump reset to: " .. defaultJumpPower, 3)
             end
         end
-        Lib.Menu:Notify("Jump Power Disabled", 3)
     end
 end)
 Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, defaultJumpPower, function(value)
@@ -365,7 +380,7 @@ Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, defaultJumpPower, function(va
             local humanoid = character:FindFirstChild("Humanoid")
             if humanoid then
                 humanoid.JumpPower = currentJumpPower
-                notifyWithCooldown("Jump Power set to " .. value, 3)
+                notifyWithCooldown("Jump Power set to: " .. value, 3)
             else
                 notifyWithCooldown("Jump Power failed: Humanoid not found", 3)
             end
@@ -376,111 +391,124 @@ Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, defaultJumpPower, function(va
         notifyWithCooldown("Enable Jump Power to apply jump power", 3)
     end
 end)
-Lib.Menu:AddToggle(mainTab, "Noclip", false, function(state)
-    toggleNoclip(state)
-end)
 
--- Добавляем настройки для Fly (только если модуль загрузился)
+-- Секция: Fly (если модуль доступен)
 if Fly then
-    Lib.Menu:AddToggle(mainTab, "Fly", false, function(state)
+    Lib.Menu:AddSection(mainTab, "Fly Settings")
+    Lib.Menu:AddToggle(mainTab, "Enable Fly", false, function(state)
         local success, message = Fly:ToggleFly(state)
         if success then
-            Lib.Menu:Notify(message, 3)
+            notifyWithCooldown(message, 3)
         else
-            Lib.Menu:Notify("Error: " .. message, 3)
+            notifyWithCooldown("Fly Error: " .. message, 3)
         end
     end)
     Lib.Menu:AddSlider(mainTab, "Fly Speed", 50, 200, 50, function(value)
         Fly.flySpeed = value
-        notifyWithCooldown("Fly Speed set to " .. value, 3)
+        notifyWithCooldown("Fly Speed set to: " .. value, 3)
     end)
 end
 
--- Добавляем Anti-AFK
-Lib.Menu:AddSection(mainTab, "Utility")
-Lib.Menu:AddToggle(mainTab, "Enable Anti-AFK", false, function(state)
-    toggleAntiAfk(state)
-end)
+-- Секция: Other Movement
+Lib.Menu:AddSection(mainTab, "Other Movement")
+Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip)
 
--- Секции и элементы для вкладки Teleport
+-- Секция: Utility
+Lib.Menu:AddSection(mainTab, "Utility")
+Lib.Menu:AddToggle(mainTab, "Enable Anti-AFK", false, toggleAntiAfk)
+
+-- === Вкладка Teleport ===
+-- Секция: Teleport to Player
 Lib.Menu:AddSection(teleportTab, "Teleport to Player")
 local teleportTextBox = Lib.Menu:AddTextBox(teleportTab, "Player Name (First Letters)", "", function(playerName)
     teleportToPlayer(playerName)
 end)
-Lib.Menu:AddButton(teleportTab, "Teleport", function()
+Lib.Menu:AddButton(teleportTab, "Teleport to Player", function()
     teleportToPlayer(teleportTextBox.Text)
 end)
 
-Lib.Menu:AddSection(teleportTab, "Teleport on Click (Left Ctrl + Click)")
+-- Секция: Teleport on Click
+Lib.Menu:AddSection(teleportTab, "Teleport on Click")
 Lib.Menu:AddToggle(teleportTab, "Enable Teleport on Click", false, function(state)
     teleportOnClickEnabled = state
     if state then
-        Lib.Menu:Notify("Teleport on Click enabled (Left Ctrl + Click)", 3)
+        notifyWithCooldown("Teleport on Click Enabled (" .. teleportKey.Name .. " + Click)", 3)
     else
-        Lib.Menu:Notify("Teleport on Click disabled", 3)
+        notifyWithCooldown("Teleport on Click Disabled", 3)
+    end
+end)
+Lib.Menu:AddDropdown(teleportTab, "Teleport Key", {"LeftControl", "LeftAlt", "LeftShift"}, "LeftControl", function(key)
+    if key == "LeftControl" then
+        teleportKey = Enum.KeyCode.LeftControl
+    elseif key == "LeftAlt" then
+        teleportKey = Enum.KeyCode.LeftAlt
+    elseif key == "LeftShift" then
+        teleportKey = Enum.KeyCode.LeftShift
+    end
+    if teleportOnClickEnabled then
+        notifyWithCooldown("Teleport Key changed to: " .. key, 3)
     end
 end)
 
--- Секции и элементы для вкладки ESP (добавляем только если модуль загрузился)
+-- === Вкладка ESP (если модуль доступен) ===
 if ESP then
-    Lib.Menu:AddSection(espTab, "ESP Settings")
+    -- Секция: General ESP Settings
+    Lib.Menu:AddSection(espTab, "General ESP Settings")
     Lib.Menu:AddToggle(espTab, "Enable ESP", true, function(state)
         ESP.espEnabled = state
-        if state then
-            Lib.Menu:Notify("ESP Enabled", 3)
-        else
-            Lib.Menu:Notify("ESP Disabled", 3)
-        end
+        notifyWithCooldown("ESP " .. (state and "Enabled" or "Disabled"), 3)
     end)
-
     Lib.Menu:AddToggle(espTab, "Enable Team Check", true, function(state)
         ESP.teamCheckEnabled = state
-        Lib.Menu:Notify("Team Check " .. (state and "Enabled" or "Disabled"), 3)
+        notifyWithCooldown("Team Check " .. (state and "Enabled" or "Disabled"), 3)
     end)
-
-    Lib.Menu:AddToggle(espTab, "Enable Tracers", true, function(state)
-        ESP.tracersEnabled = state
-        Lib.Menu:Notify("Tracers " .. (state and "Enabled" or "Disabled"), 3)
-    end)
-
-    Lib.Menu:AddToggle(espTab, "Tracers From Bottom", false, function(state)
-        ESP.tracerFromBottom = state
-        Lib.Menu:Notify("Tracers From Bottom " .. (state and "Enabled" or "Disabled"), 3)
-    end)
-
     Lib.Menu:AddSlider(espTab, "ESP Distance", 100, 3000, 3000, function(value)
         ESP.espMaxDistance = value
-        notifyWithCooldown("ESP Distance set to " .. value .. " studs", 3)
+        notifyWithCooldown("ESP Distance set to: " .. value .. " studs", 3)
     end)
 
-    Lib.Menu:AddSlider(espTab, "Box Transparency", 0, 1, 0.5, function(value)
-        ESP.boxTransparency = value
-        notifyWithCooldown("Box Transparency set to " .. value, 3)
+    -- Секция: Tracers Settings
+    Lib.Menu:AddSection(espTab, "Tracers Settings")
+    Lib.Menu:AddToggle(espTab, "Enable Tracers", true, function(state)
+        ESP.tracersEnabled = state
+        notifyWithCooldown("Tracers " .. (state and "Enabled" or "Disabled"), 3)
     end)
-
-    Lib.Menu:AddSlider(espTab, "Box Thickness", 0, 0.5, 0.1, function(value)
-        ESP.boxThickness = value
-        notifyWithCooldown("Box Thickness set to " .. value, 3)
+    Lib.Menu:AddToggle(espTab, "Tracers From Bottom", false, function(state)
+        ESP.tracerFromBottom = state
+        notifyWithCooldown("Tracers From Bottom " .. (state and "Enabled" or "Disabled"), 3)
     end)
-
     Lib.Menu:AddSlider(espTab, "Tracer Thickness", 1, 5, 2, function(value)
         ESP.tracerThickness = value
-        notifyWithCooldown("Tracer Thickness set to " .. value, 3)
+        notifyWithCooldown("Tracer Thickness set to: " .. value, 3)
     end)
 
+    -- Секция: Box Settings
+    Lib.Menu:AddSection(espTab, "Box Settings")
+    Lib.Menu:AddSlider(espTab, "Box Transparency", 0, 1, 0.5, function(value)
+        ESP.boxTransparency = value
+        notifyWithCooldown("Box Transparency set to: " .. value, 3)
+    end)
+    Lib.Menu:AddSlider(espTab, "Box Thickness", 0, 0.5, 0.1, function(value)
+        ESP.boxThickness = value
+        notifyWithCooldown("Box Thickness set to: " .. value, 3)
+    end)
+
+    -- Секция: Text Settings
+    Lib.Menu:AddSection(espTab, "Text Settings")
     Lib.Menu:AddSlider(espTab, "Text Size", 8, 20, 10, function(value)
         ESP.textSize = value
-        notifyWithCooldown("Text Size set to " .. value, 3)
+        notifyWithCooldown("Text Size set to: " .. value, 3)
     end)
 
+    -- Секция: Colors
+    Lib.Menu:AddSection(espTab, "Colors")
     Lib.Menu:AddColorPicker(espTab, "Visible Color", ESP.espVisibleColor, function(color)
         ESP.espVisibleColor = color
-        Lib.Menu:Notify("Visible ESP color updated", 3)
+        notifyWithCooldown("Visible ESP color updated", 3)
     end)
-
     Lib.Menu:AddColorPicker(espTab, "Not Visible Color", ESP.espNotVisibleColor, function(color)
         ESP.espNotVisibleColor = color
-        Lib.Menu:Notify("Not Visible ESP color updated", 3)
+        notifyWithCooldown("Not Visible ESP color updated", 3)
     end)
 end
 
