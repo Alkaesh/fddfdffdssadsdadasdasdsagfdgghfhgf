@@ -168,7 +168,7 @@ local function isSameTeam(player)
     return LocalPlayer.Team == player.Team
 end
 
--- Функция для вывода структуры персонажа в консоль (для отладки)
+-- Функция для вывода структуры персонажа в консоль (для отладки, опционально)
 local function debugCharacterStructure(character)
     local partsList = {}
     for _, part in pairs(character:GetChildren()) do
@@ -176,7 +176,8 @@ local function debugCharacterStructure(character)
             table.insert(partsList, part.Name)
         end
     end
-    warn("Character structure for " .. character.Name .. ": " .. table.concat(partsList, ", "))
+    -- Раскомментируй следующую строку, если нужно снова включить отладку структуры
+    -- warn("Character structure for " .. character.Name .. ": " .. table.concat(partsList, ", "))
 end
 
 -- Функция для обновления ESP
@@ -188,7 +189,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine:Remove()
+                skeletonLine.Visible = false
             end
         end
         return
@@ -206,7 +207,6 @@ local function updateESP()
                 local distance = (localRoot.Position - targetRoot.Position).Magnitude
                 if distance <= ESP.espMaxDistance then
                     createESP(player)
-                    -- Выводим структуру персонажа в консоль для отладки
                     debugCharacterStructure(player.Character)
                 end
             end
@@ -230,7 +230,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine:Remove()
+                skeletonLine.Visible = false
             end
             continue
         end
@@ -243,7 +243,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine:Remove()
+                skeletonLine.Visible = false
             end
             continue
         end
@@ -255,7 +255,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine:Remove()
+                skeletonLine.Visible = false
             end
             continue
         end
@@ -267,7 +267,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine:Remove()
+                skeletonLine.Visible = false
             end
             continue
         end
@@ -331,12 +331,6 @@ local function updateESP()
 
         -- Skeleton ESP
         if ESP.skeletonEnabled then
-            -- Очищаем старые линии скелета
-            for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine:Remove()
-            end
-            elements.Skeleton = {}
-
             -- Определяем ключевые части тела с поддержкой альтернативных названий
             local parts = {
                 Head = character:FindFirstChild("Head"),
@@ -351,11 +345,6 @@ local function updateESP()
                 LeftLowerLeg = character:FindFirstChild("LeftLowerLeg") or character:FindFirstChild("Left Leg") or character:FindFirstChild("LeftLeg"),
                 RightLowerLeg = character:FindFirstChild("RightLowerLeg") or character:FindFirstChild("Right Leg") or character:FindFirstChild("RightLeg")
             }
-
-            -- Проверяем, найдены ли ключевые части тела (для отладки)
-            if not parts.Head or not parts.UpperTorso then
-                warn("Skeleton ESP: Missing Head or UpperTorso/Torso/Body/Chest for player " .. player.Name)
-            end
 
             -- Определяем связи между частями тела
             local connections = {
@@ -376,33 +365,35 @@ local function updateESP()
                 local fromPart = parts[connection.from]
                 local toPart = parts[connection.to]
                 if fromPart and toPart then
-                    -- Используем CFrame для более точного позиционирования
-                    local fromPos = fromPart.Position
-                    local toPos = toPart.Position
-                    local fromScreenPos, fromOnScreen = Camera:WorldToViewportPoint(fromPos)
-                    local toScreenPos, toOnScreen = Camera:WorldToViewportPoint(toPos)
-
+                    local fromPos, fromOnScreen = Camera:WorldToViewportPoint(fromPart.Position)
+                    local toPos, toOnScreen = Camera:WorldToViewportPoint(toPart.Position)
                     if fromOnScreen and toOnScreen then
-                        local line = Drawing.new("Line")
-                        line.Thickness = 1
-                        line.Transparency = 1
-                        line.From = Vector2.new(fromScreenPos.X, fromScreenPos.Y)
-                        line.To = Vector2.new(toScreenPos.X, toScreenPos.Y)
+                        if not elements.Skeleton[i] then
+                            local line = Drawing.new("Line")
+                            line.Thickness = 1
+                            line.Transparency = 1
+                            elements.Skeleton[i] = line
+                        end
+                        local line = elements.Skeleton[i]
+                        line.From = Vector2.new(fromPos.X, fromPos.Y)
+                        line.To = Vector2.new(toPos.X, toPos.Y)
                         line.Color = color
                         line.Visible = true
-                        elements.Skeleton[i] = line
                     else
-                        warn("Skeleton ESP: Line " .. connection.from .. " to " .. connection.to .. " for player " .. player.Name .. " is off-screen")
+                        if elements.Skeleton[i] then
+                            elements.Skeleton[i].Visible = false
+                        end
                     end
                 else
-                    warn("Skeleton ESP: Missing parts for connection " .. connection.from .. " to " .. connection.to .. " for player " .. player.Name)
+                    if elements.Skeleton[i] then
+                        elements.Skeleton[i].Visible = false
+                    end
                 end
             end
         else
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine:Remove()
+                skeletonLine.Visible = false
             end
-            elements.Skeleton = {}
         end
     end
 end
