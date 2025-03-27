@@ -9,12 +9,12 @@ local RunService = game:GetService("RunService")
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CheatMenu"
 screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true -- Игнорируем верхнюю панель Roblox
+screenGui.IgnoreGuiInset = true
 screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
 -- Основной фрейм меню
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 450, 0, 350) -- Увеличим размер для удобства
+mainFrame.Size = UDim2.new(0, 450, 0, 350)
 mainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderSizePixel = 0
@@ -26,7 +26,7 @@ local shadow = Instance.new("ImageLabel")
 shadow.Size = UDim2.new(1, 20, 1, 20)
 shadow.Position = UDim2.new(0, -10, 0, -10)
 shadow.BackgroundTransparency = 1
-shadow.Image = "rbxassetid://1316045217" -- Тень
+shadow.Image = "rbxassetid://1316045217"
 shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
 shadow.ImageTransparency = 0.6
 shadow.ScaleType = Enum.ScaleType.Slice
@@ -83,6 +83,9 @@ local tabPadding = Instance.new("UIPadding")
 tabPadding.PaddingTop = UDim.new(0, 5)
 tabPadding.Parent = tabContainer
 
+-- Создаем поле Menu внутри Lib
+Lib.Menu = {}
+
 -- Функция для создания меню
 function Lib.Menu:CreateMenu(title)
     titleLabel.Text = title
@@ -120,6 +123,7 @@ end
 
 -- Функция для добавления вкладки
 function Lib.Menu:AddTab(menu, tabName)
+    -- Создаем кнопку вкладки
     local tabButton = Instance.new("TextButton")
     tabButton.Size = UDim2.new(1, 0, 0, 35)
     tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -508,7 +512,7 @@ function Lib.Menu:Notify(message, duration)
     end)
 end
 
--- Функция для добавления выпадающего списка (дополнительная функциональность)
+-- Функция для добавления выпадающего списка
 function Lib.Menu:AddDropdown(tab, name, options, default, callback)
     local dropdownFrame = Instance.new("Frame")
     dropdownFrame.Size = UDim2.new(1, 0, 0, 30)
