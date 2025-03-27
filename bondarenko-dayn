@@ -290,7 +290,7 @@ end)
 -- Секции и элементы для вкладки ESP (добавляем только если модуль загрузился)
 if ESP then
     Lib.Menu:AddSection(espTab, "ESP Settings")
-    Lib.Menu:AddToggle(espTab, "Enable ESP", true, function(state)
+    Lib.Menu:AddToggle(espTab, "Enable ESP", false, function(state)
         ESP.espEnabled = state
         if state then
             Lib.Menu:Notify("ESP Enabled", 3)
