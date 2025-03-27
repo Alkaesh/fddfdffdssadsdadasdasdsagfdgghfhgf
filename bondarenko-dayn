@@ -482,17 +482,6 @@ if ESP then
         notifyWithCooldown("Tracer Thickness set to: " .. value, 3)
     end)
 
-    -- Секция: Box Settings
-    Lib.Menu:AddSection(espTab, "Box Settings")
-    Lib.Menu:AddSlider(espTab, "Box Transparency", 0, 1, 0.5, function(value)
-        ESP.boxTransparency = value
-        notifyWithCooldown("Box Transparency set to: " .. value, 3)
-    end)
-    Lib.Menu:AddSlider(espTab, "Box Thickness", 0, 0.5, 0.1, function(value)
-        ESP.boxThickness = value
-        notifyWithCooldown("Box Thickness set to: " .. value, 3)
-    end)
-
     -- Секция: Text Settings
     Lib.Menu:AddSection(espTab, "Text Settings")
     Lib.Menu:AddSlider(espTab, "Text Size", 8, 20, 10, function(value)
