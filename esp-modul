@@ -80,7 +80,7 @@ local function createESP(player)
     local box = Instance.new("BoxHandleAdornment")
     box.Name = "ESP_Box"
     box.Parent = rootPart
-    box.Adornee = character -- Привязываем к character, а не rootPart
+    box.Adornee = rootPart -- Привязываем к HumanoidRootPart
     box.Size = Vector3.new(4, 6, 4) -- Начальный размер, будет обновляться
     box.AlwaysOnTop = true
     box.ZIndex = 0
@@ -279,8 +279,8 @@ local function updateESP()
 
         -- Обновляем бокс с помощью GetBoundingBox
         local modelCFrame, modelSize = character:GetBoundingBox()
-        elements.Box.Size = modelSize + Vector3.new(ESP.boxThickness, ESP.boxThickness, ESP.boxThickness) -- Добавляем толщину бокса
-        elements.Box.CFrame = modelCFrame -- Устанавливаем позицию и ориентацию бокса
+        elements.Box.Size = modelSize + Vector3.new(ESP.boxThickness, ESP.boxThickness, ESP.boxThickness) -- Устанавливаем размер бокса
+        elements.Box.Adornee = rootPart -- Убедимся, что Adornee установлен
         elements.Box.Color3 = color
         elements.Box.Transparency = ESP.boxTransparency
         elements.Box.Visible = true
@@ -347,8 +347,8 @@ local function updateESP()
                 local fromPart = parts[connection.from]
                 local toPart = parts[connection.to]
                 if fromPart and toPart then
-                    local fromPos, fromOnScreen = Camera:WorldToScreenPoint(fromPart.Position)
-                    local toPos, toOnScreen = Camera:WorldToScreenPoint(toPart.Position)
+                    local fromPos, fromOnScreen = Camera:WorldToViewportPoint(fromPart.Position)
+                    local toPos, toOnScreen = Camera:WorldToViewportPoint(toPart.Position)
                     if fromOnScreen and toOnScreen then
                         if not elements.Skeleton[i] then
                             local line = Drawing.new("Line")
