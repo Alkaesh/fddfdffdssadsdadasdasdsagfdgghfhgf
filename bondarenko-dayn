@@ -79,8 +79,12 @@ local function updateDefaultValues()
         if humanoid then
             defaultSpeed = humanoid.WalkSpeed
             defaultJumpPower = humanoid.JumpPower
-            currentSpeed = defaultSpeed
-            currentJumpPower = defaultJumpPower
+            if not speedEnabled then
+                currentSpeed = defaultSpeed
+            end
+            if not jumpEnabled then
+                currentJumpPower = defaultJumpPower
+            end
         end
     end
 end
@@ -95,9 +99,13 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     local humanoid = character:WaitForChild("Humanoid")
     if speedEnabled then
         humanoid.WalkSpeed = currentSpeed
+    else
+        humanoid.WalkSpeed = defaultSpeed
     end
     if jumpEnabled then
         humanoid.JumpPower = currentJumpPower
+    else
+        humanoid.JumpPower = defaultJumpPower
     end
 end)
 
@@ -127,7 +135,6 @@ local function toggleAntiAfk(state)
     if antiAfkEnabled then
         spawn(function()
             while antiAfkEnabled do
-                -- Симулируем небольшое движение каждые 10 секунд
                 local character = getCharacter(LocalPlayer)
                 if character then
                     local rootPart = character:FindFirstChild("HumanoidRootPart")
@@ -137,7 +144,7 @@ local function toggleAntiAfk(state)
                         rootPart.CFrame = rootPart.CFrame - Vector3.new(0.1, 0, 0)
                     end
                 end
-                wait(10) -- Интервал между "движениями"
+                wait(10)
             end
         end)
         Lib.Menu:Notify("Anti-AFK Enabled", 3)
@@ -165,7 +172,6 @@ local function toggleNoclip(state)
             end
         end)
     else
-        -- При выключении Noclip возвращаем CanCollide в исходное состояние
         local character = getCharacter(LocalPlayer)
         if character then
             for _, v in pairs(character:GetChildren()) do
@@ -227,27 +233,6 @@ local function teleportToPlayer(partialName)
     end
 end
 
--- Функция для Teleport Clip
-local function teleportClip()
-    local character = getCharacter(LocalPlayer)
-    if character then
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        if rootPart then
-            local wasClipon = Clipon
-            toggleNoclip(true)
-            local forwardDirection = rootPart.CFrame.LookVector
-            rootPart.CFrame = rootPart.CFrame + (forwardDirection * 50)
-            wait(0.1)
-            toggleNoclip(wasClipon)
-            Lib.Menu:Notify("Teleported forward (Clip)", 2)
-        else
-            Lib.Menu:Notify("Could not teleport: No HumanoidRootPart found", 3)
-        end
-    else
-        Lib.Menu:Notify("Could not teleport: Character not found", 3)
-    end
-end
-
 -- Функция для телепортации по клику (Left Ctrl + Click)
 local function teleportToClickPosition()
     local character = getCharacter(LocalPlayer)
@@ -293,26 +278,48 @@ Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
     if state then
         Lib.Menu:Notify("Speedhack Enabled", 3)
     else
+        currentSpeed = defaultSpeed -- Сбрасываем до дефолтного значения при выключении
+        local character = getCharacter(LocalPlayer)
+        if character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = defaultSpeed
+            end
+        end
         Lib.Menu:Notify("Speedhack Disabled", 3)
     end
 end)
 Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, defaultSpeed, function(value)
-    currentSpeed = value
-    speedEnabled = true
-    notifyWithCooldown("Speed set to " .. value, 3)
+    if speedEnabled then
+        currentSpeed = value
+        notifyWithCooldown("Speed set to " .. value, 3)
+    else
+        notifyWithCooldown("Enable Speedhack to change speed", 3)
+    end
 end)
 Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
     jumpEnabled = state
     if state then
         Lib.Menu:Notify("Jump Power Enabled", 3)
     else
+        currentJumpPower = defaultJumpPower -- Сбрасываем до дефолтного значения при выключении
+        local character = getCharacter(LocalPlayer)
+        if character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.JumpPower = defaultJumpPower
+            end
+        end
         Lib.Menu:Notify("Jump Power Disabled", 3)
     end
 end)
 Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, defaultJumpPower, function(value)
-    currentJumpPower = value
-    jumpEnabled = true
-    notifyWithCooldown("Jump Power set to " .. value, 3)
+    if jumpEnabled then
+        currentJumpPower = value
+        notifyWithCooldown("Jump Power set to " .. value, 3)
+    else
+        notifyWithCooldown("Enable Jump Power to change jump power", 3)
+    end
 end)
 Lib.Menu:AddToggle(mainTab, "Noclip", false, function(state)
     toggleNoclip(state)
@@ -347,11 +354,6 @@ local teleportTextBox = Lib.Menu:AddTextBox(teleportTab, "Player Name (First Let
 end)
 Lib.Menu:AddButton(teleportTab, "Teleport", function()
     teleportToPlayer(teleportTextBox.Text)
-end)
-
-Lib.Menu:AddSection(teleportTab, "Teleport Clip")
-Lib.Menu:AddButton(teleportTab, "Teleport Forward (Clip)", function()
-    teleportClip()
 end)
 
 Lib.Menu:AddSection(teleportTab, "Teleport on Click (Left Ctrl + Click)")
