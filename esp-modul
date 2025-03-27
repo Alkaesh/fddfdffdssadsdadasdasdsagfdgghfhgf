@@ -21,6 +21,9 @@ ESP.boxTransparency = 0.5 -- Прозрачность боксов (0-1)
 ESP.tracerThickness = 2 -- Толщина трассеров (1-5)
 ESP.boxThickness = 0.1 -- Толщина бокса (0-0.5)
 ESP.textSize = 10 -- Размер текста (8-20)
+ESP.skeletonEnabled = false -- Настройка для Skeleton ESP
+ESP.xrayEnabled = false -- Настройка для X-Ray
+ESP.xrayColor = Color3.fromRGB(128, 0, 128) -- Фиолетовый цвет для X-Ray (RGB: 128, 0, 128)
 ESP.espElements = {} -- Таблица для хранения элементов ESP
 
 -- Функция для создания ESP для игрока
@@ -71,7 +74,7 @@ local function createESP(player)
     healthLabel.TextColor3 = Color3.new(1, 1, 1)
     healthLabel.TextSize = ESP.textSize
     healthLabel.Font = Enum.Font.Gotham
-    healthLabel.TextStrokeTransparency = 0.5 -- Исправлено: nameLabel на healthLabel
+    healthLabel.TextStrokeTransparency = 0.5
 
     -- Создаем Box ESP (коробку вокруг игрока)
     local box = Instance.new("BoxHandleAdornment")
@@ -96,7 +99,8 @@ local function createESP(player)
         HealthLabel = healthLabel,
         Box = box,
         Tracer = tracer,
-        Visible = false
+        Visible = false,
+        Skeleton = {} -- Таблица для линий скелета
     }
 end
 
@@ -106,6 +110,9 @@ local function removeESP(player)
         ESP.espElements[player].Billboard:Destroy()
         ESP.espElements[player].Box:Destroy()
         ESP.espElements[player].Tracer:Remove()
+        for _, skeletonLine in pairs(ESP.espElements[player].Skeleton) do
+            skeletonLine:Remove()
+        end
         ESP.espElements[player] = nil
     end
 end
@@ -175,6 +182,9 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            for _, skeletonLine in pairs(elements.Skeleton) do
+                skeletonLine.Visible = false
+            end
         end
         return
     end
@@ -211,6 +221,9 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            for _, skeletonLine in pairs(elements.Skeleton) do
+                skeletonLine.Visible = false
+            end
             continue
         end
 
@@ -220,6 +233,9 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            for _, skeletonLine in pairs(elements.Skeleton) do
+                skeletonLine.Visible = false
+            end
             continue
         end
 
@@ -228,6 +244,9 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            for _, skeletonLine in pairs(elements.Skeleton) do
+                skeletonLine.Visible = false
+            end
             continue
         end
 
@@ -236,15 +255,26 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            for _, skeletonLine in pairs(elements.Skeleton) do
+                skeletonLine.Visible = false
+            end
             continue
         end
 
-        -- Проверяем видимость
-        local isVisible = isPlayerVisible(character)
+        -- Проверяем видимость (если X-Ray выключен)
+        local isVisible = true
+        if not ESP.xrayEnabled then
+            isVisible = isPlayerVisible(character)
+        end
         elements.Visible = isVisible
 
-        -- Определяем цвет
-        local color = isVisible and ESP.espVisibleColor or ESP.espNotVisibleColor
+        -- Определяем цвет в зависимости от X-Ray
+        local color
+        if ESP.xrayEnabled then
+            color = ESP.xrayColor -- Фиолетовый цвет для X-Ray
+        else
+            color = isVisible and ESP.espVisibleColor or ESP.espNotVisibleColor
+        end
 
         -- Обновляем элементы ESP
         elements.Billboard.Enabled = true
@@ -280,6 +310,73 @@ local function updateESP()
             end
         else
             elements.Tracer.Visible = false
+        end
+
+        -- Skeleton ESP
+        if ESP.skeletonEnabled then
+            -- Определяем ключевые части тела
+            local parts = {
+                Head = character:FindFirstChild("Head"),
+                UpperTorso = character:FindFirstChild("UpperTorso"),
+                LowerTorso = character:FindFirstChild("LowerTorso"),
+                LeftUpperArm = character:FindFirstChild("LeftUpperArm"),
+                RightUpperArm = character:FindFirstChild("RightUpperArm"),
+                LeftLowerArm = character:FindFirstChild("LeftLowerArm"),
+                RightLowerArm = character:FindFirstChild("RightLowerArm"),
+                LeftUpperLeg = character:FindFirstChild("LeftUpperLeg"),
+                RightUpperLeg = character:FindFirstChild("RightUpperLeg"),
+                LeftLowerLeg = character:FindFirstChild("LeftLowerLeg"),
+                RightLowerLeg = character:FindFirstChild("RightLowerLeg")
+            }
+
+            -- Определяем связи между частями тела
+            local connections = {
+                {from = "Head", to = "UpperTorso"},
+                {from = "UpperTorso", to = "LowerTorso"},
+                {from = "UpperTorso", to = "LeftUpperArm"},
+                {from = "UpperTorso", to = "RightUpperArm"},
+                {from = "LeftUpperArm", to = "LeftLowerArm"},
+                {from = "RightUpperArm", to = "RightLowerArm"},
+                {from = "LowerTorso", to = "LeftUpperLeg"},
+                {from = "LowerTorso", to = "RightUpperLeg"},
+                {from = "LeftUpperLeg", to = "LeftLowerLeg"},
+                {from = "RightUpperLeg", to = "RightLowerLeg"}
+            }
+
+            -- Рисуем линии скелета
+            for i, connection in ipairs(connections) do
+                local fromPart = parts[connection.from]
+                local toPart = parts[connection.to]
+                if fromPart and toPart then
+                    local fromPos, fromOnScreen = Camera:WorldToScreenPoint(fromPart.Position)
+                    local toPos, toOnScreen = Camera:WorldToScreenPoint(toPart.Position)
+                    if fromOnScreen and toOnScreen then
+                        if not elements.Skeleton[i] then
+                            local line = Drawing.new("Line")
+                            line.Thickness = 1
+                            line.Transparency = 1
+                            elements.Skeleton[i] = line
+                        end
+                        local line = elements.Skeleton[i]
+                        line.From = Vector2.new(fromPos.X, fromPos.Y)
+                        line.To = Vector2.new(toPos.X, toPos.Y)
+                        line.Color = color
+                        line.Visible = true
+                    else
+                        if elements.Skeleton[i] then
+                            elements.Skeleton[i].Visible = false
+                        end
+                    end
+                else
+                    if elements.Skeleton[i] then
+                        elements.Skeleton[i].Visible = false
+                    end
+                end
+            end
+        else
+            for _, skeletonLine in pairs(elements.Skeleton) do
+                skeletonLine.Visible = false
+            end
         end
     end
 end
