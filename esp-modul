@@ -308,8 +308,8 @@ local function updateESP()
         -- Обновляем бокс с помощью GetBoundingBox
         if ESP.boxesEnabled then
             local modelCFrame, modelSize = character:GetBoundingBox()
-            elements.Box.Size = modelSize + Vector3.new(ESP.boxThickness, ESP.boxThickness, ESP.boxThickness) -- Устанавливаем размер бокса
-            elements.Box.Adornee = rootPart -- Убедимся, что Adornee установлен
+            elements.Box.Size = modelSize + Vector3.new(ESP.boxThickness, ESP.boxThickness, ESP.boxThickness)
+            elements.Box.Adornee = rootPart
             elements.Box.Color3 = color
             elements.Box.Transparency = ESP.boxTransparency
             elements.Box.Visible = true
