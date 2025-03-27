@@ -13,7 +13,7 @@ local ESP = {}
 ESP.espEnabled = true -- Включить/выключить ESP
 ESP.teamCheckEnabled = true -- Включить/выключить тим-чек
 ESP.tracersEnabled = true -- Включить/выключить трассеры
-ESP.boxesEnabled = true -- Включить/выключить боксы (новая настройка)
+ESP.boxesEnabled = true -- Включить/выключить боксы
 ESP.tracerFromBottom = false -- Трассеры от низа экрана (true) или из центра (false)
 ESP.espVisibleColor = Color3.fromRGB(0, 255, 0) -- Цвет для видимых игроков (зеленый)
 ESP.espNotVisibleColor = Color3.fromRGB(255, 0, 0) -- Цвет для невидимых игроков (красный)
@@ -177,7 +177,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+                skeletonLine:Remove()
             end
         end
         return
@@ -217,7 +217,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+                skeletonLine:Remove()
             end
             continue
         end
@@ -230,7 +230,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+                skeletonLine:Remove()
             end
             continue
         end
@@ -242,7 +242,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+                skeletonLine:Remove()
             end
             continue
         end
@@ -254,7 +254,7 @@ local function updateESP()
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+                skeletonLine:Remove()
             end
             continue
         end
@@ -318,20 +318,25 @@ local function updateESP()
 
         -- Skeleton ESP
         if ESP.skeletonEnabled then
-            -- Определяем ключевые части тела
+            -- Определяем ключевые части тела с поддержкой альтернативных названий
             local parts = {
                 Head = character:FindFirstChild("Head"),
-                UpperTorso = character:FindFirstChild("UpperTorso"),
-                LowerTorso = character:FindFirstChild("LowerTorso"),
-                LeftUpperArm = character:FindFirstChild("LeftUpperArm"),
-                RightUpperArm = character:FindFirstChild("RightUpperArm"),
-                LeftLowerArm = character:FindFirstChild("LeftLowerArm"),
-                RightLowerArm = character:FindFirstChild("RightLowerArm"),
-                LeftUpperLeg = character:FindFirstChild("LeftUpperLeg"),
-                RightUpperLeg = character:FindFirstChild("RightUpperLeg"),
-                LeftLowerLeg = character:FindFirstChild("LeftLowerLeg"),
-                RightLowerLeg = character:FindFirstChild("RightLowerLeg")
+                UpperTorso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso"),
+                LowerTorso = character:FindFirstChild("LowerTorso") or character:FindFirstChild("Torso"),
+                LeftUpperArm = character:FindFirstChild("LeftUpperArm") or character:FindFirstChild("Left Arm"),
+                RightUpperArm = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm"),
+                LeftLowerArm = character:FindFirstChild("LeftLowerArm") or character:FindFirstChild("Left Arm"),
+                RightLowerArm = character:FindFirstChild("RightLowerArm") or character:FindFirstChild("Right Arm"),
+                LeftUpperLeg = character:FindFirstChild("LeftUpperLeg") or character:FindFirstChild("Left Leg"),
+                RightUpperLeg = character:FindFirstChild("RightUpperLeg") or character:FindFirstChild("Right Leg"),
+                LeftLowerLeg = character:FindFirstChild("LeftLowerLeg") or character:FindFirstChild("Left Leg"),
+                RightLowerLeg = character:FindFirstChild("RightLowerLeg") or character:FindFirstChild("Right Leg")
             }
+
+            -- Проверяем, найдены ли ключевые части тела (для отладки)
+            if not parts.Head or not parts.UpperTorso then
+                warn("Skeleton ESP: Missing Head or UpperTorso/Torso for player " .. player.Name)
+            end
 
             -- Определяем связи между частями тела
             local connections = {
@@ -379,7 +384,7 @@ local function updateESP()
             end
         else
             for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+                skeletonLine:Remove()
             end
         end
     end
