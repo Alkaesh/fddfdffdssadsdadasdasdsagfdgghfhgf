@@ -1,270 +1,337 @@
--- esp-modul
+-- esp-modul.lua
 
-local ESP = {}
-ESP.espEnabled = true
-ESP.teamCheckEnabled = true
-ESP.tracersEnabled = true
-ESP.tracerFromBottom = false
-ESP.espMaxDistance = 3000
-ESP.tracerThickness = 2
-ESP.boxTransparency = 0.5 -- Прозрачность бокса (оставляем, хотя не используется в интерфейсе)
-ESP.boxThickness = 0.1 -- Толщина бокса (оставляем, хотя не используется в интерфейсе)
-ESP.textSize = 10
-ESP.espVisibleColor = Color3.fromRGB(0, 255, 0) -- Цвет для видимых игроков
-ESP.espNotVisibleColor = Color3.fromRGB(255, 0, 0) -- Цвет для невидимых игроков
-ESP.skeletonEnabled = false -- Настройка для Skeleton ESP
-ESP.xrayEnabled = false -- Настройка для X-Ray
-ESP.xrayColor = Color3.fromRGB(128, 0, 128) -- Фиолетовый цвет для X-Ray (RGB: 128, 0, 128)
-
+-- Основные сервисы
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Camera = game:GetService("Workspace").CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Таблица для хранения объектов ESP
-local espObjects = {}
+-- Таблица для экспорта переменных и функций
+local ESP = {}
 
--- Функция для создания BillboardGui для текста
-local function createBillboardGui(parent)
-    local billboard = Instance.new("BillboardGui")
-    billboard.Adornee = parent
-    billboard.Size = UDim2.new(0, 100, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 3, 0) -- Над головой
-    billboard.AlwaysOnTop = true
-    billboard.MaxDistance = ESP.espMaxDistance
+-- Переменные для ESP (доступны для изменения из основного скрипта)
+ESP.espEnabled = true -- Включить/выключить ESP
+ESP.teamCheckEnabled = true -- Включить/выключить тим-чек
+ESP.tracersEnabled = true -- Включить/выключить трассеры
+ESP.tracerFromBottom = false -- Трассеры от низа экрана (true) или из центра (false)
+ESP.espVisibleColor = Color3.fromRGB(0, 255, 0) -- Цвет для видимых игроков (зеленый)
+ESP.espNotVisibleColor = Color3.fromRGB(255, 0, 0) -- Цвет для невидимых игроков (красный)
+ESP.espMaxDistance = 1000 -- Максимальная дистанция рендера ESP (в studs)
+ESP.boxTransparency = 0.5 -- Прозрачность боксов (0-1)
+ESP.tracerThickness = 2 -- Толщина трассеров (1-5)
+ESP.boxThickness = 0.1 -- Толщина бокса (0-0.5)
+ESP.textSize = 10 -- Размер текста (8-20)
+ESP.espElements = {} -- Таблица для хранения элементов ESP
 
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, 0, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.TextSize = ESP.textSize
-    textLabel.Font = Enum.Font.SourceSans
-    textLabel.TextColor3 = ESP.espVisibleColor
-    textLabel.TextStrokeTransparency = 0
-    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    textLabel.Parent = billboard
+-- Функция для создания ESP для игрока
+local function createESP(player)
+    if player == LocalPlayer or not player.Character then return end
 
-    return billboard
-end
-
--- Функция для создания BoxHandleAdornment для бокса
-local function createBoxAdornment(parent)
-    local box = Instance.new("BoxHandleAdornment")
-    box.Adornee = parent
-    box.Size = Vector3.new(4, 6, 2) -- Размер бокса (будет обновляться через GetBoundingBox)
-    box.Transparency = 0.5
-    box.Color3 = ESP.espVisibleColor
-    box.AlwaysOnTop = true
-    return box
-end
-
--- Функция для создания Beam для трассеров и линий скелета
-local function createBeam()
-    local beam = Instance.new("Beam")
-    beam.Width0 = 0.1
-    beam.Width1 = 0.1
-    beam.Color = ColorSequence.new(ESP.espVisibleColor)
-    beam.Enabled = false
-    return beam
-end
-
--- Функция для проверки, является ли игрок видимым
-local function isPlayerVisible(player)
     local character = player.Character
-    if not character then return false end
-
     local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return false end
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not rootPart or not humanoid then return end
 
-    local distance = (rootPart.Position - Camera.CFrame.Position).Magnitude
-    local ray = Ray.new(Camera.CFrame.Position, (rootPart.Position - Camera.CFrame.Position).Unit * distance)
-    local hit = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character or {}})
-    return hit == nil or hit:IsDescendantOf(character)
+    -- Создаем BillboardGui для текста (сбоку от бокса)
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_Billboard"
+    billboard.Parent = rootPart
+    billboard.Size = UDim2.new(0, 100, 0, 60) -- Размер для трех строк
+    billboard.StudsOffset = Vector3.new(3, 0, 0) -- Смещаем вправо от бокса
+    billboard.AlwaysOnTop = true
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Parent = billboard
+    nameLabel.Size = UDim2.new(1, 0, 0, 20)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.new(1, 1, 1)
+    nameLabel.TextSize = ESP.textSize
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextStrokeTransparency = 0.5
+
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Parent = billboard
+    distanceLabel.Size = UDim2.new(1, 0, 0, 20)
+    distanceLabel.Position = UDim2.new(0, 0, 0, 20)
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Text = "0 studs"
+    distanceLabel.TextColor3 = Color3.new(1, 1, 1)
+    distanceLabel.TextSize = ESP.textSize
+    distanceLabel.Font = Enum.Font.Gotham
+    distanceLabel.TextStrokeTransparency = 0.5
+
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Parent = billboard
+    healthLabel.Size = UDim2.new(1, 0, 0, 20)
+    healthLabel.Position = UDim2.new(0, 0, 0, 40)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Text = "100%"
+    healthLabel.TextColor3 = Color3.new(1, 1, 1)
+    healthLabel.TextSize = ESP.textSize
+    healthLabel.Font = Enum.Font.Gotham
+    healthLabel.TextStrokeTransparency = 0.5 -- Исправлено: nameLabel на healthLabel
+
+    -- Создаем Box ESP (коробку вокруг игрока)
+    local box = Instance.new("BoxHandleAdornment")
+    box.Name = "ESP_Box"
+    box.Parent = rootPart
+    box.Adornee = rootPart
+    box.Size = Vector3.new(4, 6, 4) -- Начальный размер, будет обновляться
+    box.AlwaysOnTop = true
+    box.ZIndex = 0
+    box.Transparency = ESP.boxTransparency
+    box.Color3 = ESP.espVisibleColor
+
+    -- Создаем Drawing объект для трассера
+    local tracer = Drawing.new("Line")
+    tracer.Thickness = ESP.tracerThickness
+    tracer.Transparency = 1
+
+    ESP.espElements[player] = {
+        Billboard = billboard,
+        NameLabel = nameLabel,
+        DistanceLabel = distanceLabel,
+        HealthLabel = healthLabel,
+        Box = box,
+        Tracer = tracer,
+        Visible = false
+    }
 end
 
--- Основная функция обновления ESP
+-- Функция для удаления ESP для игрока
+local function removeESP(player)
+    if ESP.espElements[player] then
+        ESP.espElements[player].Billboard:Destroy()
+        ESP.espElements[player].Box:Destroy()
+        ESP.espElements[player].Tracer:Remove()
+        ESP.espElements[player] = nil
+    end
+end
+
+-- Функция для проверки видимости игрока
+local function isPlayerVisible(targetCharacter)
+    local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not localRoot or not targetCharacter then return false end
+
+    local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
+    local targetHead = targetCharacter:FindFirstChild("Head")
+    if not targetRoot or not targetHead then return false end
+
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+    -- Проверяем видимость через два луча: к голове и к торсу
+    local raycastResult1 = workspace:Raycast(
+        Camera.CFrame.Position,
+        (targetHead.Position - Camera.CFrame.Position),
+        raycastParams
+    )
+    local raycastResult2 = workspace:Raycast(
+        Camera.CFrame.Position,
+        (targetRoot.Position - Camera.CFrame.Position),
+        raycastParams
+    )
+
+    local visibleHead = not raycastResult1 or raycastResult1.Instance:IsDescendantOf(targetCharacter)
+    local visibleTorso = not raycastResult2 or raycastResult2.Instance:IsDescendantOf(targetCharacter)
+
+    return visibleHead or visibleTorso
+end
+
+-- Функция для проверки команды
+local function isSameTeam(player)
+    if not LocalPlayer.Team or not player.Team then return false end
+    return LocalPlayer.Team == player.Team
+end
+
+-- Функция для обновления размера бокса
+local function updateBoxSize(character, box)
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not humanoid then return end
+
+    local bodyWidth = 3
+    local bodyHeight = 5
+    local bodyDepth = 1.5
+
+    -- Проверяем размеры частей тела
+    local head = character:FindFirstChild("Head")
+    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+    if head and torso then
+        bodyHeight = (head.Position - torso.Position).Magnitude + head.Size.Y * 0.5
+        bodyWidth = math.max(head.Size.X, torso.Size.X) * 0.8
+        bodyDepth = math.max(head.Size.Z, torso.Size.Z) * 0.8
+    end
+
+    box.Size = Vector3.new(bodyWidth + ESP.boxThickness, bodyHeight + ESP.boxThickness, bodyDepth + ESP.boxThickness)
+end
+
+-- Функция для обновления ESP
 local function updateESP()
+    if not ESP.espEnabled then
+        for _, elements in pairs(ESP.espElements) do
+            elements.Billboard.Enabled = false
+            elements.Box.Visible = false
+            elements.Tracer.Visible = false
+        end
+        return
+    end
+
+    -- Получаем центр экрана или низ экрана для трассеров
+    local screenCenter = ESP.tracerFromBottom and Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y) or Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+    -- Проверяем всех игроков и добавляем ESP для новых
     for _, player in pairs(Players:GetPlayers()) do
-        if player == LocalPlayer then continue end
-        if ESP.teamCheckEnabled and player.Team == LocalPlayer.Team then continue end
+        if player ~= LocalPlayer and not ESP.espElements[player] and player.Character then
+            local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+            if localRoot and targetRoot then
+                local distance = (localRoot.Position - targetRoot.Position).Magnitude
+                if distance <= ESP.espMaxDistance then
+                    createESP(player)
+                end
+            end
+        end
+    end
+
+    for player, elements in pairs(ESP.espElements) do
+        if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") or not player.Character:FindFirstChild("Humanoid") then
+            removeESP(player)
+            continue
+        end
 
         local character = player.Character
-        if not character then
-            if espObjects[player] then
-                for _, obj in pairs(espObjects[player]) do
-                    obj:Destroy()
-                end
-                espObjects[player] = nil
-            end
-            continue
-        end
-
         local rootPart = character:FindFirstChild("HumanoidRootPart")
-        if not rootPart then continue end
+        local humanoid = character:FindFirstChild("Humanoid")
+        local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
-        local distance = (rootPart.Position - Camera.CFrame.Position).Magnitude
-        if distance > ESP.espMaxDistance then
-            if espObjects[player] then
-                for _, obj in pairs(espObjects[player]) do
-                    obj:Destroy()
-                end
-                espObjects[player] = nil
-            end
+        if not localRoot then
+            elements.Billboard.Enabled = false
+            elements.Box.Visible = false
+            elements.Tracer.Visible = false
             continue
         end
 
-        -- Создаём объекты ESP, если их ещё нет
-        if not espObjects[player] then
-            local box = createBoxAdornment(rootPart)
-            local name = createBillboardGui(rootPart)
-            local tracer = createBeam()
-            local tracerAttachment0 = Instance.new("Attachment")
-            local tracerAttachment1 = Instance.new("Attachment")
-            tracerAttachment0.Parent = rootPart
-            tracerAttachment1.Parent = Camera
-            tracer.Attachment0 = tracerAttachment0
-            tracer.Attachment1 = tracerAttachment1
-            tracer.Parent = rootPart
-
-            espObjects[player] = {
-                box = box,
-                tracer = tracer,
-                tracerAttachment0 = tracerAttachment0,
-                tracerAttachment1 = tracerAttachment1,
-                name = name,
-                skeleton = {} -- Таблица для линий скелета
-            }
+        -- Проверяем дистанцию
+        local distance = (localRoot.Position - rootPart.Position).Magnitude
+        if distance > ESP.espMaxDistance then
+            elements.Billboard.Enabled = false
+            elements.Box.Visible = false
+            elements.Tracer.Visible = false
+            continue
         end
 
-        local esp = espObjects[player]
-        local box = esp.box
-        local tracer = esp.tracer
-        local tracerAttachment0 = esp.tracerAttachment0
-        local tracerAttachment1 = esp.tracerAttachment1
-        local name = esp.name
-        local skeleton = esp.skeleton
-
-        -- Проверка видимости (если X-Ray выключен)
-        local isVisible = true
-        if not ESP.xrayEnabled then
-            isVisible = isPlayerVisible(player)
+        -- Проверяем, жив ли игрок
+        if humanoid.Health <= 0 then
+            elements.Billboard.Enabled = false
+            elements.Box.Visible = false
+            elements.Tracer.Visible = false
+            continue
         end
 
-        -- Определяем цвет в зависимости от X-Ray
-        local espColor
-        if ESP.xrayEnabled then
-            espColor = ESP.xrayColor -- Фиолетовый цвет для X-Ray
-        else
-            espColor = isVisible and ESP.espVisibleColor or ESP.espNotVisibleColor
+        -- Проверяем команду (если тим-чек включен, тиммейты не отображаются)
+        if ESP.teamCheckEnabled and isSameTeam(player) then
+            elements.Billboard.Enabled = false
+            elements.Box.Visible = false
+            elements.Tracer.Visible = false
+            continue
         end
 
-        -- Обновляем размер бокса с помощью GetBoundingBox
-        local modelCFrame, modelSize = character:GetBoundingBox()
-        box.Size = modelSize
-        box.CFrame = modelCFrame
-        box.Color3 = espColor
-        box.Visible = ESP.espEnabled
+        -- Проверяем видимость
+        local isVisible = isPlayerVisible(character)
+        elements.Visible = isVisible
 
-        -- Трейсер
+        -- Определяем цвет
+        local color = isVisible and ESP.espVisibleColor or ESP.espNotVisibleColor
+
+        -- Обновляем элементы ESP
+        elements.Billboard.Enabled = true
+        elements.NameLabel.Text = player.Name
+        elements.NameLabel.TextColor3 = color
+        elements.NameLabel.TextSize = ESP.textSize
+        elements.DistanceLabel.Text = math.floor(distance) .. " studs"
+        elements.DistanceLabel.TextColor3 = color
+        elements.DistanceLabel.TextSize = ESP.textSize
+        elements.HealthLabel.Text = math.floor((humanoid.Health / humanoid.MaxHealth) * 100) .. "%"
+        elements.HealthLabel.TextColor3 = color
+        elements.HealthLabel.TextSize = ESP.textSize
+
+        -- Обновляем бокс
+        elements.Box.Adornee = rootPart -- Обновляем Adornee, чтобы избежать багов
+        elements.Box.Color3 = color
+        elements.Box.Transparency = ESP.boxTransparency
+        elements.Box.Visible = true
+        updateBoxSize(character, elements.Box)
+
+        -- Обновляем трассер
         if ESP.tracersEnabled then
-            tracerAttachment1.Position = ESP.tracerFromBottom and Vector3.new(0, -Camera.ViewportSize.Y / 100, 0) or Vector3.new(0, Camera.ViewportSize.Y / 100, 0)
-            tracer.Color = ColorSequence.new(espColor)
-            tracer.Enabled = ESP.espEnabled
-        else
-            tracer.Enabled = false
-        end
-
-        -- Имя
-        name.TextLabel.Text = player.Name .. " [" .. math.floor(distance) .. "]"
-        name.TextLabel.TextSize = ESP.textSize
-        name.TextLabel.TextColor3 = espColor
-        name.Enabled = ESP.espEnabled
-
-        -- Skeleton ESP
-        if ESP.skeletonEnabled then
-            -- Определяем ключевые части тела
-            local parts = {
-                Head = character:FindFirstChild("Head"),
-                UpperTorso = character:FindFirstChild("UpperTorso"),
-                LowerTorso = character:FindFirstChild("LowerTorso"),
-                LeftUpperArm = character:FindFirstChild("LeftUpperArm"),
-                RightUpperArm = character:FindFirstChild("RightUpperArm"),
-                LeftLowerArm = character:FindFirstChild("LeftLowerArm"),
-                RightLowerArm = character:FindFirstChild("RightLowerArm"),
-                LeftUpperLeg = character:FindFirstChild("LeftUpperLeg"),
-                RightUpperLeg = character:FindFirstChild("RightUpperLeg"),
-                LeftLowerLeg = character:FindFirstChild("LeftLowerLeg"),
-                RightLowerLeg = character:FindFirstChild("RightLowerLeg")
-            }
-
-            -- Определяем связи между частями тела
-            local connections = {
-                {from = "Head", to = "UpperTorso"},
-                {from = "UpperTorso", to = "LowerTorso"},
-                {from = "UpperTorso", to = "LeftUpperArm"},
-                {from = "UpperTorso", to = "RightUpperArm"},
-                {from = "LeftUpperArm", to = "LeftLowerArm"},
-                {from = "RightUpperArm", to = "RightLowerArm"},
-                {from = "LowerTorso", to = "LeftUpperLeg"},
-                {from = "LowerTorso", to = "RightUpperLeg"},
-                {from = "LeftUpperLeg", to = "LeftLowerLeg"},
-                {from = "RightUpperLeg", to = "RightLowerLeg"}
-            }
-
-            -- Рисуем линии скелета
-            for i, connection in ipairs(connections) do
-                local fromPart = parts[connection.from]
-                local toPart = parts[connection.to]
-                if fromPart and toPart then
-                    if not skeleton[i] then
-                        local beam = createBeam()
-                        local attachment0 = Instance.new("Attachment")
-                        local attachment1 = Instance.new("Attachment")
-                        attachment0.Parent = fromPart
-                        attachment1.Parent = toPart
-                        beam.Attachment0 = attachment0
-                        beam.Attachment1 = attachment1
-                        beam.Parent = fromPart
-                        skeleton[i] = {beam = beam, attachment0 = attachment0, attachment1 = attachment1}
-                    end
-                    local line = skeleton[i].beam
-                    line.Color = ColorSequence.new(espColor)
-                    line.Enabled = ESP.espEnabled
-                else
-                    if skeleton[i] then
-                        skeleton[i].beam.Enabled = false
-                    end
-                end
+            local feetPos = rootPart.Position - Vector3.new(0, 3, 0)
+            local screenPos, onScreen = Camera:WorldToScreenPoint(feetPos)
+            if onScreen then
+                elements.Tracer.From = screenCenter
+                elements.Tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+                elements.Tracer.Color = color
+                elements.Tracer.Thickness = ESP.tracerThickness
+                elements.Tracer.Visible = true
+            else
+                elements.Tracer.Visible = false
             end
         else
-            for _, line in pairs(skeleton) do
-                line.beam.Enabled = false
-            end
+            elements.Tracer.Visible = false
         end
     end
 end
 
--- Запускаем обновление ESP
+-- Инициализация ESP для всех игроков
+local function initializeESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if not ESP.espElements[player] then
+            createESP(player)
+        end
+    end
+end
+
+-- Обновление ESP при добавлении нового игрока
+Players.PlayerAdded:Connect(function(player)
+    if ESP.espEnabled then
+        createESP(player)
+    end
+end)
+
+-- Удаление ESP при выходе игрока
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+end)
+
+-- Обработка респавна персонажа
+local function onCharacterAdded(player, character)
+    if ESP.espEnabled and ESP.espElements[player] then
+        removeESP(player)
+        createESP(player)
+    end
+end
+
+for _, player in pairs(Players:GetPlayers()) do
+    player.CharacterAdded:Connect(function(character)
+        onCharacterAdded(player, character)
+    end)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        onCharacterAdded(player, character)
+    end)
+end)
+
+-- Обновление ESP каждый кадр
 RunService.RenderStepped:Connect(updateESP)
 
--- Очистка при выходе игрока
-Players.PlayerRemoving:Connect(function(player)
-    if espObjects[player] then
-        for _, obj in pairs(espObjects[player]) do
-            obj:Destroy()
-        end
-        espObjects[player] = nil
-    end
-end)
+-- Инициализация ESP при загрузке
+if ESP.espEnabled then
+    initializeESP()
+end
 
--- Очистка при респавне локального игрока
-LocalPlayer.CharacterAdded:Connect(function()
-    for player, objects in pairs(espObjects) do
-        for _, obj in pairs(objects) do
-            obj:Destroy()
-        end
-        espObjects[player] = nil
-    end
-end)
-
+-- Экспортируем таблицу ESP
 return ESP
