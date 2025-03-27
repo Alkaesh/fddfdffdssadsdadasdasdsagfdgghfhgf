@@ -20,20 +20,52 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Таблица для хранения объектов ESP
 local espObjects = {}
 
--- Функция для создания объекта Drawing
-local function createDrawing(type)
-    local drawing = Drawing.new(type)
-    return drawing
+-- Функция для создания BillboardGui для текста
+local function createBillboardGui(parent)
+    local billboard = Instance.new("BillboardGui")
+    billboard.Adornee = parent
+    billboard.Size = UDim2.new(0, 100, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0) -- Над головой
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = ESP.espMaxDistance
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextSize = ESP.textSize
+    textLabel.Font = Enum.Font.SourceSans
+    textLabel.TextColor3 = ESP.espVisibleColor
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.Parent = billboard
+
+    return billboard
 end
 
--- Функция для получения позиции на экране
-local function getScreenPosition(position)
-    local screenPos, onScreen = Camera:WorldToViewportPoint(position)
-    return Vector2.new(screenPos.X, screenPos.Y), onScreen
+-- Функция для создания BoxHandleAdornment для бокса
+local function createBoxAdornment(parent)
+    local box = Instance.new("BoxHandleAdornment")
+    box.Adornee = parent
+    box.Size = Vector3.new(4, 6, 2) -- Размер бокса (будет обновляться через GetBoundingBox)
+    box.Transparency = 0.5
+    box.Color3 = ESP.espVisibleColor
+    box.AlwaysOnTop = true
+    return box
+end
+
+-- Функция для создания Beam для трассеров и линий скелета
+local function createBeam()
+    local beam = Instance.new("Beam")
+    beam.Width0 = 0.1
+    beam.Width1 = 0.1
+    beam.Color = ColorSequence.new(ESP.espVisibleColor)
+    beam.Enabled = false
+    return beam
 end
 
 -- Функция для проверки, является ли игрок видимым
@@ -60,7 +92,7 @@ local function updateESP()
         if not character then
             if espObjects[player] then
                 for _, obj in pairs(espObjects[player]) do
-                    obj:Remove()
+                    obj:Destroy()
                 end
                 espObjects[player] = nil
             end
@@ -74,7 +106,7 @@ local function updateESP()
         if distance > ESP.espMaxDistance then
             if espObjects[player] then
                 for _, obj in pairs(espObjects[player]) do
-                    obj:Remove()
+                    obj:Destroy()
                 end
                 espObjects[player] = nil
             end
@@ -83,10 +115,23 @@ local function updateESP()
 
         -- Создаём объекты ESP, если их ещё нет
         if not espObjects[player] then
+            local box = createBoxAdornment(rootPart)
+            local name = createBillboardGui(rootPart)
+            local tracer = createBeam()
+            local tracerAttachment0 = Instance.new("Attachment")
+            local tracerAttachment1 = Instance.new("Attachment")
+            tracerAttachment0.Parent = rootPart
+            tracerAttachment1.Parent = Camera
+            tracer.Attachment0 = tracerAttachment0
+            tracer.Attachment1 = tracerAttachment1
+            tracer.Parent = rootPart
+
             espObjects[player] = {
-                box = createDrawing("Quad"),
-                tracer = createDrawing("Line"),
-                name = createDrawing("Text"),
+                box = box,
+                tracer = tracer,
+                tracerAttachment0 = tracerAttachment0,
+                tracerAttachment1 = tracerAttachment1,
+                name = name,
                 skeleton = {} -- Таблица для линий скелета
             }
         end
@@ -94,20 +139,10 @@ local function updateESP()
         local esp = espObjects[player]
         local box = esp.box
         local tracer = esp.tracer
+        local tracerAttachment0 = esp.tracerAttachment0
+        local tracerAttachment1 = esp.tracerAttachment1
         local name = esp.name
         local skeleton = esp.skeleton
-
-        -- Позиция на экране (центр персонажа)
-        local screenPos, onScreen = getScreenPosition(rootPart.Position)
-        if not onScreen then
-            box.Visible = false
-            tracer.Visible = false
-            name.Visible = false
-            for _, line in pairs(skeleton) do
-                line.Visible = false
-            end
-            continue
-        end
 
         -- Проверка видимости (если X-Ray выключен)
         local isVisible = true
@@ -123,63 +158,27 @@ local function updateESP()
             espColor = isVisible and ESP.espVisibleColor or ESP.espNotVisibleColor
         end
 
-        -- Исправление бокса: используем GetBoundingBox для всей модели
+        -- Обновляем размер бокса с помощью GetBoundingBox
         local modelCFrame, modelSize = character:GetBoundingBox()
-        local halfSize = modelSize / 2
-        local corners = {
-            modelCFrame * CFrame.new(-halfSize.X,  halfSize.Y, 0), -- Верхний левый
-            modelCFrame * CFrame.new( halfSize.X,  halfSize.Y, 0), -- Верхний правый
-            modelCFrame * CFrame.new( halfSize.X, -halfSize.Y, 0), -- Нижний правый
-            modelCFrame * CFrame.new(-halfSize.X, -halfSize.Y, 0)  -- Нижний левый
-        }
-
-        local screenCorners = {}
-        local minX, maxX, minY, maxY
-        for i, corner in ipairs(corners) do
-            local screenPoint, isOnScreen = Camera:WorldToViewportPoint(corner.Position)
-            screenCorners[i] = Vector2.new(screenPoint.X, screenPoint.Y)
-            if i == 1 then
-                minX, maxX = screenPoint.X, screenPoint.X
-                minY, maxY = screenPoint.Y, screenPoint.Y
-            else
-                minX = math.min(minX, screenPoint.X)
-                maxX = math.max(maxX, screenPoint.X)
-                minY = math.min(minY, screenPoint.Y)
-                maxY = math.max(maxY, screenPoint.Y)
-            end
-        end
-
-        -- Рисуем бокс
-        box.PointA = Vector2.new(minX, minY) -- Верхний левый
-        box.PointB = Vector2.new(maxX, minY) -- Верхний правый
-        box.PointC = Vector2.new(maxX, maxY) -- Нижний правый
-        box.PointD = Vector2.new(minX, maxY) -- Нижний левый
-        box.Color = espColor
-        box.Thickness = 2 -- Используем фиксированную толщину, так как настройки удалены из интерфейса
-        box.Transparency = 0 -- Используем фиксированную прозрачность, так как настройки удалены из интерфейса
+        box.Size = modelSize
+        box.CFrame = modelCFrame
+        box.Color3 = espColor
         box.Visible = ESP.espEnabled
 
         -- Трейсер
         if ESP.tracersEnabled then
-            local tracerStart = ESP.tracerFromBottom and Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y) or Vector2.new(Camera.ViewportSize.X / 2, 0)
-            tracer.From = tracerStart
-            tracer.To = screenPos
-            tracer.Color = espColor
-            tracer.Thickness = ESP.tracerThickness
-            tracer.Visible = ESP.espEnabled
+            tracerAttachment1.Position = ESP.tracerFromBottom and Vector3.new(0, -Camera.ViewportSize.Y / 100, 0) or Vector3.new(0, Camera.ViewportSize.Y / 100, 0)
+            tracer.Color = ColorSequence.new(espColor)
+            tracer.Enabled = ESP.espEnabled
         else
-            tracer.Visible = false
+            tracer.Enabled = false
         end
 
         -- Имя
-        name.Text = player.Name .. " [" .. math.floor(distance) .. "]"
-        name.Position = Vector2.new(screenPos.X, minY - 20)
-        name.Size = ESP.textSize
-        name.Color = espColor
-        name.Center = true
-        name.Outline = true
-        name.OutlineColor = Color3.fromRGB(0, 0, 0)
-        name.Visible = ESP.espEnabled
+        name.TextLabel.Text = player.Name .. " [" .. math.floor(distance) .. "]"
+        name.TextLabel.TextSize = ESP.textSize
+        name.TextLabel.TextColor3 = espColor
+        name.Enabled = ESP.espEnabled
 
         -- Skeleton ESP
         if ESP.skeletonEnabled then
@@ -217,32 +216,29 @@ local function updateESP()
                 local fromPart = parts[connection.from]
                 local toPart = parts[connection.to]
                 if fromPart and toPart then
-                    local fromPos, fromOnScreen = getScreenPosition(fromPart.Position)
-                    local toPos, toOnScreen = getScreenPosition(toPart.Position)
-                    if fromOnScreen and toOnScreen then
-                        if not skeleton[i] then
-                            skeleton[i] = createDrawing("Line")
-                        end
-                        local line = skeleton[i]
-                        line.From = fromPos
-                        line.To = toPos
-                        line.Color = espColor
-                        line.Thickness = 1
-                        line.Visible = ESP.espEnabled
-                    else
-                        if skeleton[i] then
-                            skeleton[i].Visible = false
-                        end
+                    if not skeleton[i] then
+                        local beam = createBeam()
+                        local attachment0 = Instance.new("Attachment")
+                        local attachment1 = Instance.new("Attachment")
+                        attachment0.Parent = fromPart
+                        attachment1.Parent = toPart
+                        beam.Attachment0 = attachment0
+                        beam.Attachment1 = attachment1
+                        beam.Parent = fromPart
+                        skeleton[i] = {beam = beam, attachment0 = attachment0, attachment1 = attachment1}
                     end
+                    local line = skeleton[i].beam
+                    line.Color = ColorSequence.new(espColor)
+                    line.Enabled = ESP.espEnabled
                 else
                     if skeleton[i] then
-                        skeleton[i].Visible = false
+                        skeleton[i].beam.Enabled = false
                     end
                 end
             end
         else
             for _, line in pairs(skeleton) do
-                line.Visible = false
+                line.beam.Enabled = false
             end
         end
     end
@@ -255,7 +251,7 @@ RunService.RenderStepped:Connect(updateESP)
 Players.PlayerRemoving:Connect(function(player)
     if espObjects[player] then
         for _, obj in pairs(espObjects[player]) do
-            obj:Remove()
+            obj:Destroy()
         end
         espObjects[player] = nil
     end
@@ -265,7 +261,7 @@ end)
 LocalPlayer.CharacterAdded:Connect(function()
     for player, objects in pairs(espObjects) do
         for _, obj in pairs(objects) do
-            obj:Remove()
+            obj:Destroy()
         end
         espObjects[player] = nil
     end
