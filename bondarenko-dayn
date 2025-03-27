@@ -14,6 +14,17 @@ else
     Lib.Menu:Notify("ESP module loaded successfully", 3)
 end
 
+-- Подгрузка Fly-модуля
+local Fly
+local success, err = pcall(function()
+    Fly = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/fly-modul"))()
+end)
+if not success or not Fly then
+    Lib.Menu:Notify("Failed to load Fly module! Error: " .. (err or "Unknown error"), 5)
+else
+    Lib.Menu:Notify("Fly module loaded successfully", 3)
+end
+
 -- Основные сервисы
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -234,6 +245,22 @@ Lib.Menu:AddToggle(mainTab, "Noclip", false, function(state)
     toggleNoclip(state)
 end)
 
+-- Добавляем настройки для Fly (только если модуль загрузился)
+if Fly then
+    Lib.Menu:AddToggle(mainTab, "Fly", false, function(state)
+        local success, message = Fly:ToggleFly(state)
+        if success then
+            Lib.Menu:Notify(message, 3)
+        else
+            Lib.Menu:Notify("Error: " .. message, 3)
+        end
+    end)
+    Lib.Menu:AddSlider(mainTab, "Fly Speed", 50, 200, 50, function(value)
+        Fly.flySpeed = value
+        Lib.Menu:Notify("Fly Speed set to " .. value, 3)
+    end)
+end
+
 -- Секции и элементы для вкладки Teleport
 Lib.Menu:AddSection(teleportTab, "Teleport to Player")
 local teleportTextBox = Lib.Menu:AddTextBox(teleportTab, "Player Name (First Letters)", "", function(playerName)
@@ -287,7 +314,7 @@ if ESP then
         Lib.Menu:Notify("Tracers From Bottom " .. (state and "Enabled" or "Disabled"), 3)
     end)
 
-    Lib.Menu:AddSlider(espTab, "ESP Distance", 100, 5000, 1000, function(value)
+    Lib.Menu:AddSlider(espTab, "ESP Distance", 100, 3000, 3000, function(value)
         ESP.espMaxDistance = value
         Lib.Menu:Notify("ESP Distance set to " .. value .. " studs", 3)
     end)
