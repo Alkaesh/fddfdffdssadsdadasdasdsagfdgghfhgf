@@ -483,22 +483,22 @@ if ESP then
     end)
 
     -- Секция: Skeleton ESP Settings
-    Lib.Menu:AddSection(espTab, "Skeleton ESP Settings")
-    Lib.Menu:AddToggle(espTab, "Enable Skeleton ESP", false, function(state)
-        ESP.skeletonEnabled = state
-        notifyWithCooldown("Skeleton ESP " .. (state and "Enabled" or "Disabled"), 3)
-    end)
+Lib.Menu:AddSection(espTab, "Skeleton ESP Settings")
+Lib.Menu:AddToggle(espTab, "Enable Skeleton ESP", false, function(state)
+    ESP.skeletonEnabled = state
+    notifyWithCooldown("Skeleton ESP " .. (state and "Enabled" or "Disabled"), 3)
+end)
 
-    -- Секция: X-Ray Settings
-    Lib.Menu:AddSection(espTab, "X-Ray Settings")
-    Lib.Menu:AddToggle(espTab, "Enable X-Ray", false, function(state)
-        ESP.xrayEnabled = state
-        notifyWithCooldown("X-Ray " .. (state and "Enabled" or "Disabled"), 3)
-    end)
-    Lib.Menu:AddColorPicker(espTab, "X-Ray Color", ESP.xrayColor, function(color)
-        ESP.xrayColor = color
-        notifyWithCooldown("X-Ray color updated", 3)
-    end)
+-- Секция: X-Ray Settings
+Lib.Menu:AddSection(espTab, "X-Ray Settings")
+Lib.Menu:AddToggle(espTab, "Enable X-Ray", false, function(state)
+    ESP.xrayEnabled = state
+    notifyWithCooldown("X-Ray " .. (state and "Enabled" or "Disabled"), 3)
+end)
+Lib.Menu:AddColorPicker(espTab, "X-Ray Color", ESP.xrayColor, function(color)
+    ESP.xrayColor = color
+    notifyWithCooldown("X-Ray color updated", 3)
+end)
 
     -- Секция: Text Settings
     Lib.Menu:AddSection(espTab, "Text Settings")
