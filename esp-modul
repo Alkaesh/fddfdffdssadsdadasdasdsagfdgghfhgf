@@ -13,14 +13,14 @@ local ESP = {}
 ESP.espEnabled = true -- Включить/выключить ESP
 ESP.teamCheckEnabled = true -- Включить/выключить тим-чек
 ESP.tracersEnabled = true -- Включить/выключить трассеры
+ESP.boxesEnabled = true -- Включить/выключить боксы (новая настройка)
 ESP.tracerFromBottom = false -- Трассеры от низа экрана (true) или из центра (false)
 ESP.espVisibleColor = Color3.fromRGB(0, 255, 0) -- Цвет для видимых игроков (зеленый)
 ESP.espNotVisibleColor = Color3.fromRGB(255, 0, 0) -- Цвет для невидимых игроков (красный)
 ESP.espMaxDistance = 1000 -- Максимальная дистанция рендера ESP (в studs)
 ESP.boxTransparency = 0.5 -- Прозрачность боксов (0-1)
 ESP.tracerThickness = 2 -- Толщина трассеров (1-5)
-ESP.boxThickness = 0.05 -- Уменьшенная толщина бокса (было 0.1)
-ESP.boxScale = 0.8 -- Коэффициент масштабирования бокса (уменьшаем на 20%)
+ESP.boxThickness = 0.1 -- Толщина бокса (0-0.5)
 ESP.textSize = 10 -- Размер текста (8-20)
 ESP.skeletonEnabled = false -- Настройка для Skeleton ESP
 ESP.xrayEnabled = false -- Настройка для X-Ray
@@ -279,18 +279,21 @@ local function updateESP()
         elements.HealthLabel.TextSize = ESP.textSize
 
         -- Обновляем бокс с помощью GetBoundingBox
-        local modelCFrame, modelSize = character:GetBoundingBox()
-        local scaledSize = modelSize * ESP.boxScale -- Уменьшаем размер бокса
-        elements.Box.Size = scaledSize + Vector3.new(ESP.boxThickness, ESP.boxThickness, ESP.boxThickness) -- Устанавливаем размер бокса
-        elements.Box.Adornee = rootPart -- Убедимся, что Adornee установлен
-        elements.Box.Color3 = color
-        elements.Box.Transparency = ESP.boxTransparency
-        elements.Box.Visible = true
+        if ESP.boxesEnabled then
+            local modelCFrame, modelSize = character:GetBoundingBox()
+            elements.Box.Size = modelSize + Vector3.new(ESP.boxThickness, ESP.boxThickness, ESP.boxThickness) -- Устанавливаем размер бокса
+            elements.Box.Adornee = rootPart -- Убедимся, что Adornee установлен
+            elements.Box.Color3 = color
+            elements.Box.Transparency = ESP.boxTransparency
+            elements.Box.Visible = true
+        else
+            elements.Box.Visible = false
+        end
 
         -- Обновляем трассер
         if ESP.tracersEnabled then
             local feetPos = rootPart.Position - Vector3.new(0, 3, 0)
-            local screenPos, onScreen = Camera:WorldToScreenPoint(feetPos)
+            local screenPos, onScreen = Camera:WorldToViewportPoint(feetPos)
             if onScreen then
                 elements.Tracer.From = screenCenter
                 elements.Tracer.To = Vector2.new(screenPos.X, screenPos.Y)
