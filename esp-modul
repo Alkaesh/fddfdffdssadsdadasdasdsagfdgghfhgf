@@ -104,6 +104,13 @@ local function createESP(player)
     highlight.OutlineTransparency = 0 -- Непрозрачный контур
     highlight.Enabled = false -- По умолчанию выключен
 
+    -- Создаем тестовую линию для отладки Skeleton ESP
+    local debugLine = Drawing.new("Line")
+    debugLine.Thickness = 2
+    debugLine.Transparency = 1
+    debugLine.Color = Color3.fromRGB(255, 255, 0) -- Жёлтый цвет для отладочной линии
+    debugLine.Visible = false
+
     ESP.espElements[player] = {
         Billboard = billboard,
         NameLabel = nameLabel,
@@ -112,6 +119,7 @@ local function createESP(player)
         Box = box,
         Tracer = tracer,
         Highlight = highlight, -- Для X-Ray
+        DebugLine = debugLine, -- Для отладки Skeleton ESP
         Visible = false,
         Skeleton = {} -- Таблица для линий скелета
     }
@@ -124,6 +132,7 @@ local function removeESP(player)
         ESP.espElements[player].Box:Destroy()
         ESP.espElements[player].Tracer:Remove()
         ESP.espElements[player].Highlight:Destroy()
+        ESP.espElements[player].DebugLine:Remove()
         for _, skeletonLine in pairs(ESP.espElements[player].Skeleton) do
             skeletonLine:Remove()
         end
@@ -168,6 +177,17 @@ local function isSameTeam(player)
     return LocalPlayer.Team == player.Team
 end
 
+-- Функция для вывода структуры персонажа в консоль (для отладки)
+local function debugCharacterStructure(character)
+    local partsList = {}
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            table.insert(partsList, part.Name)
+        end
+    end
+    warn("Character structure for " .. character.Name .. ": " .. table.concat(partsList, ", "))
+end
+
 -- Функция для обновления ESP
 local function updateESP()
     if not ESP.espEnabled then
@@ -176,6 +196,7 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
+            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -195,6 +216,8 @@ local function updateESP()
                 local distance = (localRoot.Position - targetRoot.Position).Magnitude
                 if distance <= ESP.espMaxDistance then
                     createESP(player)
+                    -- Выводим структуру персонажа в консоль для отладки
+                    debugCharacterStructure(player.Character)
                 end
             end
         end
@@ -216,6 +239,7 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
+            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -229,6 +253,7 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
+            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -241,6 +266,7 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
+            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -253,6 +279,7 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
+            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -321,21 +348,35 @@ local function updateESP()
             -- Определяем ключевые части тела с поддержкой альтернативных названий
             local parts = {
                 Head = character:FindFirstChild("Head"),
-                UpperTorso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso"),
-                LowerTorso = character:FindFirstChild("LowerTorso") or character:FindFirstChild("Torso"),
-                LeftUpperArm = character:FindFirstChild("LeftUpperArm") or character:FindFirstChild("Left Arm"),
-                RightUpperArm = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm"),
-                LeftLowerArm = character:FindFirstChild("LeftLowerArm") or character:FindFirstChild("Left Arm"),
-                RightLowerArm = character:FindFirstChild("RightLowerArm") or character:FindFirstChild("Right Arm"),
-                LeftUpperLeg = character:FindFirstChild("LeftUpperLeg") or character:FindFirstChild("Left Leg"),
-                RightUpperLeg = character:FindFirstChild("RightUpperLeg") or character:FindFirstChild("Right Leg"),
-                LeftLowerLeg = character:FindFirstChild("LeftLowerLeg") or character:FindFirstChild("Left Leg"),
-                RightLowerLeg = character:FindFirstChild("RightLowerLeg") or character:FindFirstChild("Right Leg")
+                UpperTorso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso") or character:FindFirstChild("Body") or character:FindFirstChild("Chest"),
+                LowerTorso = character:FindFirstChild("LowerTorso") or character:FindFirstChild("Torso") or character:FindFirstChild("Body") or character:FindFirstChild("Chest"),
+                LeftUpperArm = character:FindFirstChild("LeftUpperArm") or character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftArm"),
+                RightUpperArm = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm") or character:FindFirstChild("RightArm"),
+                LeftLowerArm = character:FindFirstChild("LeftLowerArm") or character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftArm"),
+                RightLowerArm = character:FindFirstChild("RightLowerArm") or character:FindFirstChild("Right Arm") or character:FindFirstChild("RightArm"),
+                LeftUpperLeg = character:FindFirstChild("LeftUpperLeg") or character:FindFirstChild("Left Leg") or character:FindFirstChild("LeftLeg"),
+                RightUpperLeg = character:FindFirstChild("RightUpperLeg") or character:FindFirstChild("Right Leg") or character:FindFirstChild("RightLeg"),
+                LeftLowerLeg = character:FindFirstChild("LeftLowerLeg") or character:FindFirstChild("Left Leg") or character:FindFirstChild("LeftLeg"),
+                RightLowerLeg = character:FindFirstChild("RightLowerLeg") or character:FindFirstChild("Right Leg") or character:FindFirstChild("RightLeg")
             }
 
             -- Проверяем, найдены ли ключевые части тела (для отладки)
             if not parts.Head or not parts.UpperTorso then
-                warn("Skeleton ESP: Missing Head or UpperTorso/Torso for player " .. player.Name)
+                warn("Skeleton ESP: Missing Head or UpperTorso/Torso/Body/Chest for player " .. player.Name)
+            end
+
+            -- Отладочная линия: от центра экрана к голове персонажа
+            if parts.Head then
+                local headPos, headOnScreen = Camera:WorldToViewportPoint(parts.Head.Position)
+                if headOnScreen then
+                    elements.DebugLine.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                    elements.DebugLine.To = Vector2.new(headPos.X, headPos.Y)
+                    elements.DebugLine.Visible = true
+                else
+                    elements.DebugLine.Visible = false
+                end
+            else
+                elements.DebugLine.Visible = false
             end
 
             -- Определяем связи между частями тела
@@ -383,6 +424,7 @@ local function updateESP()
                 end
             end
         else
+            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
