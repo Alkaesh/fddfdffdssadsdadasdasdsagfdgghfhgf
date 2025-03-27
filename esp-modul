@@ -92,6 +92,17 @@ local function createESP(player)
     tracer.Thickness = ESP.tracerThickness
     tracer.Transparency = 1
 
+    -- Создаем Highlight для X-Ray
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_Highlight"
+    highlight.Parent = character
+    highlight.Adornee = character
+    highlight.FillColor = ESP.xrayColor
+    highlight.OutlineColor = ESP.xrayColor
+    highlight.FillTransparency = 0.5 -- Полупрозрачная заливка
+    highlight.OutlineTransparency = 0 -- Непрозрачный контур
+    highlight.Enabled = false -- По умолчанию выключен
+
     ESP.espElements[player] = {
         Billboard = billboard,
         NameLabel = nameLabel,
@@ -99,6 +110,7 @@ local function createESP(player)
         HealthLabel = healthLabel,
         Box = box,
         Tracer = tracer,
+        Highlight = highlight, -- Для X-Ray
         Visible = false,
         Skeleton = {} -- Таблица для линий скелета
     }
@@ -110,6 +122,7 @@ local function removeESP(player)
         ESP.espElements[player].Billboard:Destroy()
         ESP.espElements[player].Box:Destroy()
         ESP.espElements[player].Tracer:Remove()
+        ESP.espElements[player].Highlight:Destroy()
         for _, skeletonLine in pairs(ESP.espElements[player].Skeleton) do
             skeletonLine:Remove()
         end
@@ -182,6 +195,7 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine.Visible = false
             end
@@ -221,6 +235,7 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine.Visible = false
             end
@@ -233,6 +248,7 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine.Visible = false
             end
@@ -244,6 +260,7 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine.Visible = false
             end
@@ -255,26 +272,19 @@ local function updateESP()
             elements.Billboard.Enabled = false
             elements.Box.Visible = false
             elements.Tracer.Visible = false
+            elements.Highlight.Enabled = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine.Visible = false
             end
             continue
         end
 
-        -- Проверяем видимость (если X-Ray выключен)
-        local isVisible = true
-        if not ESP.xrayEnabled then
-            isVisible = isPlayerVisible(character)
-        end
+        -- Проверяем видимость
+        local isVisible = isPlayerVisible(character)
         elements.Visible = isVisible
 
-        -- Определяем цвет в зависимости от X-Ray
-        local color
-        if ESP.xrayEnabled then
-            color = ESP.xrayColor -- Фиолетовый цвет для X-Ray
-        else
-            color = isVisible and ESP.espVisibleColor or ESP.espNotVisibleColor
-        end
+        -- Определяем цвет
+        local color = isVisible and ESP.espVisibleColor or ESP.espNotVisibleColor
 
         -- Обновляем элементы ESP
         elements.Billboard.Enabled = true
@@ -310,6 +320,15 @@ local function updateESP()
             end
         else
             elements.Tracer.Visible = false
+        end
+
+        -- Обновляем X-Ray (подсветка игрока)
+        if ESP.xrayEnabled then
+            elements.Highlight.FillColor = ESP.xrayColor
+            elements.Highlight.OutlineColor = ESP.xrayColor
+            elements.Highlight.Enabled = true
+        else
+            elements.Highlight.Enabled = false
         end
 
         -- Skeleton ESP
