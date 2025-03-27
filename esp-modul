@@ -26,6 +26,17 @@ ESP.xrayEnabled = false -- Настройка для X-Ray
 ESP.xrayColor = Color3.fromRGB(128, 0, 128) -- Фиолетовый цвет для X-Ray (RGB: 128, 0, 128)
 ESP.espElements = {} -- Таблица для хранения элементов ESP
 
+-- Функция для создания Beam для скелета
+local function createBeam(parent)
+    local beam = Instance.new("Beam")
+    beam.Width0 = 0.1
+    beam.Width1 = 0.1
+    beam.Color = ColorSequence.new(ESP.espVisibleColor)
+    beam.Enabled = false
+    beam.Parent = parent
+    return beam
+end
+
 -- Функция для создания ESP для игрока
 local function createESP(player)
     if player == LocalPlayer or not player.Character then return end
@@ -81,7 +92,7 @@ local function createESP(player)
     box.Name = "ESP_Box"
     box.Parent = rootPart
     box.Adornee = rootPart -- Привязываем к HumanoidRootPart
-    box.Size = Vector3.new(4, 6, 4) -- Начальный размер, будет обновляться
+    box.Size = Vector3.new(5, 7, 5) -- Фиксированный размер, чтобы охватить персонажа
     box.AlwaysOnTop = true
     box.ZIndex = 0
     box.Transparency = ESP.boxTransparency
@@ -112,7 +123,7 @@ local function createESP(player)
         Tracer = tracer,
         Highlight = highlight, -- Для X-Ray
         Visible = false,
-        Skeleton = {} -- Таблица для линий скелета
+        Skeleton = {} -- Таблица для линий скелета (теперь это Beams)
     }
 end
 
@@ -123,8 +134,8 @@ local function removeESP(player)
         ESP.espElements[player].Box:Destroy()
         ESP.espElements[player].Tracer:Remove()
         ESP.espElements[player].Highlight:Destroy()
-        for _, skeletonLine in pairs(ESP.espElements[player].Skeleton) do
-            skeletonLine:Remove()
+        for _, skeletonBeam in pairs(ESP.espElements[player].Skeleton) do
+            skeletonBeam:Destroy()
         end
         ESP.espElements[player] = nil
     end
@@ -175,8 +186,8 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+            for _, skeletonBeam in pairs(elements.Skeleton) do
+                skeletonBeam.Enabled = false
             end
         end
         return
@@ -215,8 +226,8 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+            for _, skeletonBeam in pairs(elements.Skeleton) do
+                skeletonBeam.Enabled = false
             end
             continue
         end
@@ -228,8 +239,8 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+            for _, skeletonBeam in pairs(elements.Skeleton) do
+                skeletonBeam.Enabled = false
             end
             continue
         end
@@ -240,8 +251,8 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+            for _, skeletonBeam in pairs(elements.Skeleton) do
+                skeletonBeam.Enabled = false
             end
             continue
         end
@@ -252,8 +263,8 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+            for _, skeletonBeam in pairs(elements.Skeleton) do
+                skeletonBeam.Enabled = false
             end
             continue
         end
@@ -277,10 +288,9 @@ local function updateESP()
         elements.HealthLabel.TextColor3 = color
         elements.HealthLabel.TextSize = ESP.textSize
 
-        -- Обновляем бокс с помощью GetBoundingBox
-        local modelCFrame, modelSize = character:GetBoundingBox()
-        elements.Box.Size = modelSize + Vector3.new(ESP.boxThickness, ESP.boxThickness, ESP.boxThickness) -- Устанавливаем размер бокса
+        -- Обновляем бокс
         elements.Box.Adornee = rootPart -- Убедимся, что Adornee установлен
+        elements.Box.Size = Vector3.new(5, 7, 5) -- Фиксированный размер
         elements.Box.Color3 = color
         elements.Box.Transparency = ESP.boxTransparency
         elements.Box.Visible = true
@@ -288,7 +298,7 @@ local function updateESP()
         -- Обновляем трассер
         if ESP.tracersEnabled then
             local feetPos = rootPart.Position - Vector3.new(0, 3, 0)
-            local screenPos, onScreen = Camera:WorldToScreenPoint(feetPos)
+            local screenPos, onScreen = Camera:WorldToViewportPoint(feetPos)
             if onScreen then
                 elements.Tracer.From = screenCenter
                 elements.Tracer.To = Vector2.new(screenPos.X, screenPos.Y)
@@ -316,17 +326,24 @@ local function updateESP()
             -- Определяем ключевые части тела
             local parts = {
                 Head = character:FindFirstChild("Head"),
-                UpperTorso = character:FindFirstChild("UpperTorso"),
+                UpperTorso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso"),
                 LowerTorso = character:FindFirstChild("LowerTorso"),
-                LeftUpperArm = character:FindFirstChild("LeftUpperArm"),
-                RightUpperArm = character:FindFirstChild("RightUpperArm"),
+                LeftUpperArm = character:FindFirstChild("LeftUpperArm") or character:FindFirstChild("Left Arm"),
+                RightUpperArm = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm"),
                 LeftLowerArm = character:FindFirstChild("LeftLowerArm"),
                 RightLowerArm = character:FindFirstChild("RightLowerArm"),
-                LeftUpperLeg = character:FindFirstChild("LeftUpperLeg"),
-                RightUpperLeg = character:FindFirstChild("RightUpperLeg"),
+                LeftUpperLeg = character:FindFirstChild("LeftUpperLeg") or character:FindFirstChild("Left Leg"),
+                RightUpperLeg = character:FindFirstChild("RightUpperLeg") or character:FindFirstChild("Right Leg"),
                 LeftLowerLeg = character:FindFirstChild("LeftLowerLeg"),
                 RightLowerLeg = character:FindFirstChild("RightLowerLeg")
             }
+
+            -- Отладка: проверяем, какие части тела найдены
+            for partName, part in pairs(parts) do
+                if not part then
+                    warn("Missing part for " .. player.Name .. ": " .. partName)
+                end
+            end
 
             -- Определяем связи между частями тела
             local connections = {
@@ -342,39 +359,43 @@ local function updateESP()
                 {from = "RightUpperLeg", to = "RightLowerLeg"}
             }
 
-            -- Рисуем линии скелета
+            -- Рисуем линии скелета с помощью Beam
             for i, connection in ipairs(connections) do
                 local fromPart = parts[connection.from]
                 local toPart = parts[connection.to]
                 if fromPart and toPart then
-                    local fromPos, fromOnScreen = Camera:WorldToViewportPoint(fromPart.Position)
-                    local toPos, toOnScreen = Camera:WorldToViewportPoint(toPart.Position)
-                    if fromOnScreen and toOnScreen then
-                        if not elements.Skeleton[i] then
-                            local line = Drawing.new("Line")
-                            line.Thickness = 1
-                            line.Transparency = 1
-                            elements.Skeleton[i] = line
-                        end
-                        local line = elements.Skeleton[i]
-                        line.From = Vector2.new(fromPos.X, fromPos.Y)
-                        line.To = Vector2.new(toPos.X, toPos.Y)
-                        line.Color = color
-                        line.Visible = true
-                    else
-                        if elements.Skeleton[i] then
-                            elements.Skeleton[i].Visible = false
-                        end
+                    -- Создаём Attachments для Beam
+                    local fromAttachment = Instance.new("Attachment")
+                    fromAttachment.Position = Vector3.new(0, 0, 0)
+                    fromAttachment.Parent = fromPart
+
+                    local toAttachment = Instance.new("Attachment")
+                    toAttachment.Position = Vector3.new(0, 0, 0)
+                    toAttachment.Parent = toPart
+
+                    if not elements.Skeleton[i] then
+                        local beam = createBeam(character)
+                        beam.Attachment0 = fromAttachment
+                        beam.Attachment1 = toAttachment
+                        elements.Skeleton[i] = beam
+                        elements.Skeleton[i .. "_from"] = fromAttachment
+                        elements.Skeleton[i .. "_to"] = toAttachment
                     end
+
+                    local beam = elements.Skeleton[i]
+                    beam.Color = ColorSequence.new(color)
+                    beam.Enabled = true
                 else
                     if elements.Skeleton[i] then
-                        elements.Skeleton[i].Visible = false
+                        elements.Skeleton[i].Enabled = false
                     end
                 end
             end
         else
-            for _, skeletonLine in pairs(elements.Skeleton) do
-                skeletonLine.Visible = false
+            for _, skeletonBeam in pairs(elements.Skeleton) do
+                if typeof(skeletonBeam) == "Instance" then
+                    skeletonBeam.Enabled = false
+                end
             end
         end
     end
