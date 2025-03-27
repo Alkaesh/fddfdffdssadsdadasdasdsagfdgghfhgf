@@ -83,11 +83,11 @@ local function updateDefaultValues()
             defaultJumpPower = humanoid.JumpPower
             if not speedEnabled then
                 currentSpeed = defaultSpeed
-                sliderSpeed = defaultSpeed -- Устанавливаем слайдер на дефолтное значение при загрузке
+                sliderSpeed = defaultSpeed
             end
             if not jumpEnabled then
                 currentJumpPower = defaultJumpPower
-                sliderJumpPower = defaultJumpPower -- Устанавливаем слайдер на дефолтное значение при загрузке
+                sliderJumpPower = defaultJumpPower
             end
         end
     end
@@ -101,14 +101,14 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     updateDefaultValues()
     local humanoid = character:WaitForChild("Humanoid")
     if speedEnabled then
-        currentSpeed = sliderSpeed -- Используем значение слайдера при включении
+        currentSpeed = sliderSpeed
         humanoid.WalkSpeed = currentSpeed
         notifyWithCooldown("Speedhack applied after respawn: " .. currentSpeed, 3)
     else
         humanoid.WalkSpeed = defaultSpeed
     end
     if jumpEnabled then
-        currentJumpPower = sliderJumpPower -- Используем значение слайдера при включении
+        currentJumpPower = sliderJumpPower
         humanoid.JumpPower = currentJumpPower
         notifyWithCooldown("Jump Power applied after respawn: " .. currentJumpPower, 3)
     else
@@ -291,7 +291,7 @@ Lib.Menu:AddSection(mainTab, "Movement")
 Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
     speedEnabled = state
     if state then
-        currentSpeed = sliderSpeed -- Используем значение слайдера при включении
+        currentSpeed = sliderSpeed
         local character = getCharacter(LocalPlayer)
         if character then
             local humanoid = character:FindFirstChild("Humanoid")
@@ -313,7 +313,7 @@ Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
     end
 end)
 Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, defaultSpeed, function(value)
-    sliderSpeed = value -- Всегда обновляем значение слайдера
+    sliderSpeed = value
     if speedEnabled then
         currentSpeed = sliderSpeed
         local character = getCharacter(LocalPlayer)
@@ -335,7 +335,7 @@ end)
 Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
     jumpEnabled = state
     if state then
-        currentJumpPower = sliderJumpPower -- Используем значение слайдера при включении
+        currentJumpPower = sliderJumpPower
         local character = getCharacter(LocalPlayer)
         if character then
             local humanoid = character:FindFirstChild("Humanoid")
@@ -357,7 +357,7 @@ Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
     end
 end)
 Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, defaultJumpPower, function(value)
-    sliderJumpPower = value -- Всегда обновляем значение слайдера
+    sliderJumpPower = value
     if jumpEnabled then
         currentJumpPower = sliderJumpPower
         local character = getCharacter(LocalPlayer)
