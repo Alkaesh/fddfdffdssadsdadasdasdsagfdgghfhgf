@@ -34,7 +34,7 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
 -- Создаем меню
-local menu = Lib.Menu:CreateMenu("My Cheat Menu")
+local menu = Lib.Menu:CreateMenu("Za Xoxlov")
 
 -- Вкладки
 local mainTab = Lib.Menu:AddTab(menu, "Main")
