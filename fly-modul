@@ -1,0 +1,138 @@
+-- fly-modul.lua
+
+-- Основные сервисы
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+
+-- Таблица для экспорта переменных и функций
+local Fly = {}
+
+-- Переменные для Fly (доступны для изменения из основного скрипта)
+Fly.flyEnabled = false -- Включить/выключить полёт
+Fly.flySpeed = 50 -- Скорость полёта (по умолчанию 50)
+Fly.bodyVelocity = nil -- BodyVelocity для управления движением
+Fly.bodyGyro = nil -- BodyGyro для управления направлением
+
+-- Функция для получения персонажа
+local function getCharacter()
+    return LocalPlayer.Character
+end
+
+-- Функция для включения/выключения полёта
+function Fly:ToggleFly(state)
+    Fly.flyEnabled = state
+    local character = getCharacter()
+    if not character then
+        return false, "Cannot enable Fly: Character not found"
+    end
+
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not rootPart or not humanoid then
+        Fly.flyEnabled = false
+        return false, "Cannot enable Fly: HumanoidRootPart or Humanoid not found"
+    end
+
+    if Fly.flyEnabled then
+        -- Отключаем гравитацию
+        humanoid.PlatformStand = true
+
+        -- Создаем BodyVelocity для движения
+        Fly.bodyVelocity = Instance.new("BodyVelocity")
+        Fly.bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        Fly.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        Fly.bodyVelocity.Parent = rootPart
+
+        -- Создаем BodyGyro для управления направлением
+        Fly.bodyGyro = Instance.new("BodyGyro")
+        Fly.bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        Fly.bodyGyro.CFrame = rootPart.CFrame
+        Fly.bodyGyro.Parent = rootPart
+
+        -- Обновляем движение каждый кадр
+        RunService:BindToRenderStep("Fly", Enum.RenderPriority.Input.Value, function()
+            if not Fly.flyEnabled then return end
+
+            local character = getCharacter()
+            if not character then
+                Fly:ToggleFly(false)
+                return
+            end
+
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if not rootPart then
+                Fly:ToggleFly(false)
+                return
+            end
+
+            local moveDirection = Vector3.new(0, 0, 0)
+            local camera = Workspace.CurrentCamera
+            local lookDirection = camera.CFrame.LookVector
+
+            -- Движение вперед/назад (W/S)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                moveDirection = moveDirection + lookDirection
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                moveDirection = moveDirection - lookDirection
+            end
+
+            -- Движение влево/вправо (A/D)
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                moveDirection = moveDirection - camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                moveDirection = moveDirection + camera.CFrame.RightVector
+            end
+
+            -- Подъем/спуск (Space/LeftControl)
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                moveDirection = moveDirection + Vector3.new(0, 1, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                moveDirection = moveDirection - Vector3.new(0, 1, 0)
+            end
+
+            -- Нормализуем направление и применяем скорость
+            if moveDirection.Magnitude > 0 then
+                moveDirection = moveDirection.Unit * Fly.flySpeed
+            end
+            Fly.bodyVelocity.Velocity = moveDirection
+
+            -- Обновляем направление (смотрим туда, куда смотрит камера)
+            Fly.bodyGyro.CFrame = CFrame.new(rootPart.Position, rootPart.Position + lookDirection)
+        end)
+
+        return true, "Fly Enabled (WASD, Space, LeftControl)"
+    else
+        -- Отключаем полёт
+        RunService:UnbindFromRenderStep("Fly")
+        if Fly.bodyVelocity then
+            Fly.bodyVelocity:Destroy()
+            Fly.bodyVelocity = nil
+        end
+        if Fly.bodyGyro then
+            Fly.bodyGyro:Destroy()
+            Fly.bodyGyro = nil
+        end
+        if humanoid then
+            humanoid.PlatformStand = false
+        end
+        return true, "Fly Disabled"
+    end
+end
+
+-- Обработка респавна персонажа
+LocalPlayer.CharacterAdded:Connect(function(character)
+    if Fly.flyEnabled then
+        -- Если Fly был включен, перезапускаем его после респавна
+        Fly:ToggleFly(false)
+        Fly:ToggleFly(true)
+    end
+end)
+
+-- Экспортируем таблицу Fly
+return Fly
