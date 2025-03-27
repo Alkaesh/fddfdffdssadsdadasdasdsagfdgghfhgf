@@ -458,6 +458,11 @@ if ESP then
         ESP.espEnabled = state
         notifyWithCooldown("ESP " .. (state and "Enabled" or "Disabled"), 3)
     end)
+-- Секция: Box Toggle
+Lib.Menu:AddToggle(espTab, "Enable Boxes", true, function(state)
+    ESP.boxesEnabled = state
+    notifyWithCooldown("Boxes " .. (state and "Enabled" or "Disabled"), 3)
+end)
     Lib.Menu:AddToggle(espTab, "Enable Team Check", true, function(state)
         ESP.teamCheckEnabled = state
         notifyWithCooldown("Team Check " .. (state and "Enabled" or "Disabled"), 3)
