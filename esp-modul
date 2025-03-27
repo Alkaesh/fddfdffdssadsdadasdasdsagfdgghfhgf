@@ -104,13 +104,6 @@ local function createESP(player)
     highlight.OutlineTransparency = 0 -- Непрозрачный контур
     highlight.Enabled = false -- По умолчанию выключен
 
-    -- Создаем тестовую линию для отладки Skeleton ESP
-    local debugLine = Drawing.new("Line")
-    debugLine.Thickness = 2
-    debugLine.Transparency = 1
-    debugLine.Color = Color3.fromRGB(255, 255, 0) -- Жёлтый цвет для отладочной линии
-    debugLine.Visible = false
-
     ESP.espElements[player] = {
         Billboard = billboard,
         NameLabel = nameLabel,
@@ -119,7 +112,6 @@ local function createESP(player)
         Box = box,
         Tracer = tracer,
         Highlight = highlight, -- Для X-Ray
-        DebugLine = debugLine, -- Для отладки Skeleton ESP
         Visible = false,
         Skeleton = {} -- Таблица для линий скелета
     }
@@ -132,7 +124,6 @@ local function removeESP(player)
         ESP.espElements[player].Box:Destroy()
         ESP.espElements[player].Tracer:Remove()
         ESP.espElements[player].Highlight:Destroy()
-        ESP.espElements[player].DebugLine:Remove()
         for _, skeletonLine in pairs(ESP.espElements[player].Skeleton) do
             skeletonLine:Remove()
         end
@@ -196,7 +187,6 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -239,7 +229,6 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -253,7 +242,6 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -266,7 +254,6 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -279,7 +266,6 @@ local function updateESP()
             elements.Box.Visible = false
             elements.Tracer.Visible = false
             elements.Highlight.Enabled = false
-            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
@@ -345,6 +331,12 @@ local function updateESP()
 
         -- Skeleton ESP
         if ESP.skeletonEnabled then
+            -- Очищаем старые линии скелета
+            for _, skeletonLine in pairs(elements.Skeleton) do
+                skeletonLine:Remove()
+            end
+            elements.Skeleton = {}
+
             -- Определяем ключевые части тела с поддержкой альтернативных названий
             local parts = {
                 Head = character:FindFirstChild("Head"),
@@ -363,20 +355,6 @@ local function updateESP()
             -- Проверяем, найдены ли ключевые части тела (для отладки)
             if not parts.Head or not parts.UpperTorso then
                 warn("Skeleton ESP: Missing Head or UpperTorso/Torso/Body/Chest for player " .. player.Name)
-            end
-
-            -- Отладочная линия: от центра экрана к голове персонажа
-            if parts.Head then
-                local headPos, headOnScreen = Camera:WorldToViewportPoint(parts.Head.Position)
-                if headOnScreen then
-                    elements.DebugLine.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                    elements.DebugLine.To = Vector2.new(headPos.X, headPos.Y)
-                    elements.DebugLine.Visible = true
-                else
-                    elements.DebugLine.Visible = false
-                end
-            else
-                elements.DebugLine.Visible = false
             end
 
             -- Определяем связи между частями тела
@@ -398,36 +376,33 @@ local function updateESP()
                 local fromPart = parts[connection.from]
                 local toPart = parts[connection.to]
                 if fromPart and toPart then
-                    local fromPos, fromOnScreen = Camera:WorldToViewportPoint(fromPart.Position)
-                    local toPos, toOnScreen = Camera:WorldToViewportPoint(toPart.Position)
+                    -- Используем CFrame для более точного позиционирования
+                    local fromPos = fromPart.Position
+                    local toPos = toPart.Position
+                    local fromScreenPos, fromOnScreen = Camera:WorldToViewportPoint(fromPos)
+                    local toScreenPos, toOnScreen = Camera:WorldToViewportPoint(toPos)
+
                     if fromOnScreen and toOnScreen then
-                        if not elements.Skeleton[i] then
-                            local line = Drawing.new("Line")
-                            line.Thickness = 1
-                            line.Transparency = 1
-                            elements.Skeleton[i] = line
-                        end
-                        local line = elements.Skeleton[i]
-                        line.From = Vector2.new(fromPos.X, fromPos.Y)
-                        line.To = Vector2.new(toPos.X, toPos.Y)
+                        local line = Drawing.new("Line")
+                        line.Thickness = 1
+                        line.Transparency = 1
+                        line.From = Vector2.new(fromScreenPos.X, fromScreenPos.Y)
+                        line.To = Vector2.new(toScreenPos.X, toScreenPos.Y)
                         line.Color = color
                         line.Visible = true
+                        elements.Skeleton[i] = line
                     else
-                        if elements.Skeleton[i] then
-                            elements.Skeleton[i].Visible = false
-                        end
+                        warn("Skeleton ESP: Line " .. connection.from .. " to " .. connection.to .. " for player " .. player.Name .. " is off-screen")
                     end
                 else
-                    if elements.Skeleton[i] then
-                        elements.Skeleton[i].Visible = false
-                    end
+                    warn("Skeleton ESP: Missing parts for connection " .. connection.from .. " to " .. connection.to .. " for player " .. player.Name)
                 end
             end
         else
-            elements.DebugLine.Visible = false
             for _, skeletonLine in pairs(elements.Skeleton) do
                 skeletonLine:Remove()
             end
+            elements.Skeleton = {}
         end
     end
 end
