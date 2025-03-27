@@ -80,7 +80,7 @@ local function createESP(player)
     local box = Instance.new("BoxHandleAdornment")
     box.Name = "ESP_Box"
     box.Parent = rootPart
-    box.Adornee = rootPart
+    box.Adornee = character -- Привязываем к character, а не rootPart
     box.Size = Vector3.new(4, 6, 4) -- Начальный размер, будет обновляться
     box.AlwaysOnTop = true
     box.ZIndex = 0
@@ -165,27 +165,6 @@ end
 local function isSameTeam(player)
     if not LocalPlayer.Team or not player.Team then return false end
     return LocalPlayer.Team == player.Team
-end
-
--- Функция для обновления размера бокса
-local function updateBoxSize(character, box)
-    local humanoid = character:FindFirstChild("Humanoid")
-    if not humanoid then return end
-
-    local bodyWidth = 3
-    local bodyHeight = 5
-    local bodyDepth = 1.5
-
-    -- Проверяем размеры частей тела
-    local head = character:FindFirstChild("Head")
-    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
-    if head and torso then
-        bodyHeight = (head.Position - torso.Position).Magnitude + head.Size.Y * 0.5
-        bodyWidth = math.max(head.Size.X, torso.Size.X) * 0.8
-        bodyDepth = math.max(head.Size.Z, torso.Size.Z) * 0.8
-    end
-
-    box.Size = Vector3.new(bodyWidth + ESP.boxThickness, bodyHeight + ESP.boxThickness, bodyDepth + ESP.boxThickness)
 end
 
 -- Функция для обновления ESP
@@ -298,12 +277,13 @@ local function updateESP()
         elements.HealthLabel.TextColor3 = color
         elements.HealthLabel.TextSize = ESP.textSize
 
-        -- Обновляем бокс
-        elements.Box.Adornee = rootPart -- Обновляем Adornee, чтобы избежать багов
+        -- Обновляем бокс с помощью GetBoundingBox
+        local modelCFrame, modelSize = character:GetBoundingBox()
+        elements.Box.Size = modelSize + Vector3.new(ESP.boxThickness, ESP.boxThickness, ESP.boxThickness) -- Добавляем толщину бокса
+        elements.Box.CFrame = modelCFrame -- Устанавливаем позицию и ориентацию бокса
         elements.Box.Color3 = color
         elements.Box.Transparency = ESP.boxTransparency
         elements.Box.Visible = true
-        updateBoxSize(character, elements.Box)
 
         -- Обновляем трассер
         if ESP.tracersEnabled then
