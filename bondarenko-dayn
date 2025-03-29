@@ -413,53 +413,71 @@ end
 Lib.Menu:AddSection(mainTab, "Other Movement")
 Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip)
 
--- Переменная для состояния постоянного щита
-local isPermanentShieldEnabled = false
+-- Переменная для состояния бессмертия
+local isGodModeEnabled = false
 
--- Функция для управления постоянным щитом
-local function togglePermanentShield(state)
-    isPermanentShieldEnabled = state
+-- Функция для управления бессмертием
+local function toggleGodMode(state)
+    isGodModeEnabled = state
     local character = getCharacter(LocalPlayer)
     if not character then
-        notifyWithCooldown("Permanent Shield failed: Character not found", 3)
+        notifyWithCooldown("God Mode failed: Character not found", 3)
         return
     end
 
-    if isPermanentShieldEnabled then
-        -- Проверяем, есть ли уже щит, и если нет — создаём новый
-        local existingShield = character:FindFirstChildOfClass("ForceField")
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not humanoid then
+        notifyWithCooldown("God Mode failed: Humanoid not found", 3)
+        return
+    end
+
+    if isGodModeEnabled then
+        -- Создаём щит для визуального эффекта
+        local existingShield = character:FindFirstChild("GodModeShield")
         if not existingShield then
             local forceField = Instance.new("ForceField")
-            forceField.Name = "PermanentShield"
+            forceField.Name = "GodModeShield"
             forceField.Parent = character
         end
-        notifyWithCooldown("Permanent Shield Enabled", 3)
+        -- Устанавливаем бесконечное здоровье
+        humanoid.MaxHealth = math.huge
+        humanoid.Health = math.huge
+        notifyWithCooldown("God Mode Enabled (Shield + Invulnerability)", 3)
     else
-        -- Удаляем щит, если он был создан нами
-        local shield = character:FindFirstChild("PermanentShield")
+        -- Удаляем щит
+        local shield = character:FindFirstChild("GodModeShield")
         if shield then
             shield:Destroy()
         end
-        notifyWithCooldown("Permanent Shield Disabled", 3)
+        -- Возвращаем нормальное здоровье
+        humanoid.MaxHealth = 100 -- Стандартное значение, может отличаться
+        humanoid.Health = 100
+        notifyWithCooldown("God Mode Disabled", 3)
     end
 end
 
 -- Добавляем переключатель в меню
-Lib.Menu:AddToggle(mainTab, "Enable Permanent Shield", false, function(state)
-    togglePermanentShield(state)
+Lib.Menu:AddToggle(mainTab, "Enable God Mode", false, function(state)
+    toggleGodMode(state)
 end)
 
--- Постоянное поддержание щита
+-- Постоянное поддержание бессмертия
 RunService.RenderStepped:Connect(function()
-    if isPermanentShieldEnabled then
+    if isGodModeEnabled then
         local character = getCharacter(LocalPlayer)
         if character then
-            local shield = character:FindFirstChildOfClass("ForceField")
+            -- Поддерживаем щит
+            local shield = character:FindFirstChild("GodModeShield")
             if not shield then
-                -- Если щит пропал (например, игра его удалила), создаём новый
                 local forceField = Instance.new("ForceField")
-                forceField.Name = "PermanentShield"
+                forceField.Name = "GodModeShield"
                 forceField.Parent = character
+            end
+            -- Поддерживаем бесконечное здоровье
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid and (humanoid.MaxHealth ~= math.huge or humanoid.Health ~= math.huge) then
+                humanoid.MaxHealth = math.huge
+                humanoid.Health = math.huge
             end
         end
     end
@@ -467,17 +485,22 @@ end)
 
 -- Применение при респавне
 LocalPlayer.CharacterAdded:Connect(function(character)
-    if isPermanentShieldEnabled then
-        -- Ждём, пока персонаж полностью загрузится
+    if isGodModeEnabled then
         local humanoid = character:WaitForChild("Humanoid", 5)
         if humanoid then
-            local existingShield = character:FindFirstChildOfClass("ForceField")
+            -- Добавляем щит
+            local existingShield = character:FindFirstChild("GodModeShield")
             if not existingShield then
                 local forceField = Instance.new("ForceField")
-                forceField.Name = "PermanentShield"
+                forceField.Name = "GodModeShield"
                 forceField.Parent = character
             end
-            notifyWithCooldown("Permanent Shield reapplied after respawn", 3)
+            -- Устанавливаем бесконечное здоровье
+            humanoid.MaxHealth = math.huge
+            humanoid.Health = math.huge
+            notifyWithCooldown("God Mode reapplied after respawn", 3)
+        else
+            notifyWithCooldown("God Mode failed: Humanoid not loaded", 3)
         end
     end
 end)
