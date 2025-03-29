@@ -412,6 +412,8 @@ end
 -- Секция: Other Movement
 Lib.Menu:AddSection(mainTab, "Other Movement")
 Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip)
+
+
 -- Новая секция для Silent Aim
 Lib.Menu:AddSection(mainTab, "Silent Aim")
 
@@ -419,7 +421,54 @@ Lib.Menu:AddSection(mainTab, "Silent Aim")
 local silentAimEnabled = false
 local silentAimFOV = 100 -- Радиус действия (в studs)
 local silentAimTeamCheck = true -- Проверка на команду
+local silentAimHitChance = 100 -- Шанс попадания (в процентах)
+local silentAimTargetPart = "Head" -- Часть тела для прицеливания
 local silentAimTarget = nil -- Текущая цель
+local fovCircle = Drawing.new("Circle") -- Круг FOV
+
+-- Настройка круга FOV
+fovCircle.Transparency = 1
+fovCircle.Thickness = 2
+fovCircle.Color = Color3.fromRGB(231, 84, 128)
+fovCircle.Filled = false
+fovCircle.NumSides = 12
+
+-- Функция для обновления круга FOV
+local function updateFovCircle()
+    fovCircle.Visible = silentAimEnabled
+    fovCircle.Radius = silentAimFOV * 3
+    fovCircle.Position = Vector2.new(Mouse.X, Mouse.Y + GuiService:GetGuiInset().Y)
+end
+
+-- Функция для проверки шанса попадания
+local function calcChance(percentage)
+    percentage = math.floor(percentage)
+    local chance = math.floor(Random.new():NextNumber(0, 1) * 100) / 100
+    return chance <= percentage / 100
+end
+
+-- Функция для проверки видимости части
+local function isPartVisible(part, partDescendant)
+    local character = getCharacter(LocalPlayer)
+    if not character then return false end
+
+    local origin = Workspace.CurrentCamera.CFrame.Position
+    local _, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(part.Position)
+
+    if onScreen then
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {character, Workspace.CurrentCamera}
+
+        local result = Workspace:Raycast(origin, part.Position - origin, raycastParams)
+        if result then
+            local partHit = result.Instance
+            return not partHit or partHit:IsDescendantOf(partDescendant)
+        end
+    end
+
+    return false
+end
 
 -- Функция для поиска ближайшего врага
 local function findNearestEnemy()
@@ -442,17 +491,23 @@ local function findNearestEnemy()
         local targetCharacter = getCharacter(player)
         if not targetCharacter then continue end
 
-        local targetRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
+        local targetPart = targetCharacter:FindFirstChild(silentAimTargetPart)
         local targetHumanoid = targetCharacter:FindFirstChild("Humanoid")
-        if not targetRootPart or not targetHumanoid then continue end
+        if not targetPart or not targetHumanoid then continue end
 
         -- Проверяем, жив ли враг
         if targetHumanoid.Health <= 0 then continue end
 
-        -- Проверяем расстояние
-        local distance = (rootPart.Position - targetRootPart.Position).Magnitude
-        if distance <= closestDistance then
-            closestDistance = distance
+        -- Проверяем видимость
+        if not isPartVisible(targetPart, targetCharacter) then continue end
+
+        -- Проверяем расстояние до курсора
+        local partPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(targetPart.Position)
+        if not onScreen then continue end
+
+        local magnitude = (Vector2.new(partPos.X, partPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+        if magnitude <= closestDistance * 3 and magnitude < closestDistance then
+            closestDistance = magnitude
             closestEnemy = player
         end
     end
@@ -460,22 +515,26 @@ local function findNearestEnemy()
     return closestEnemy
 end
 
--- Функция для перехвата Raycast (лучей)
+-- Перехват Raycast для Silent Aim
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local args = {...}
     local method = getnamecallmethod()
 
     if silentAimEnabled and method == "FindPartOnRayWithIgnoreList" and self == Workspace then
+        -- Проверяем шанс попадания
+        if not calcChance(silentAimHitChance) then
+            return oldNamecall(self, ...)
+        end
+
         silentAimTarget = findNearestEnemy()
         if silentAimTarget then
             local targetCharacter = getCharacter(silentAimTarget)
             if targetCharacter then
-                local targetHead = targetCharacter:FindFirstChild("Head")
-                if targetHead then
-                    -- Перенаправляем луч на голову врага
+                local targetPart = targetCharacter:FindFirstChild(silentAimTargetPart)
+                if targetPart then
                     local origin = args[1].Origin
-                    local direction = (targetHead.Position - origin).Unit * 1000
+                    local direction = (targetPart.Position - origin).Unit * 1000
                     args[1] = Ray.new(origin, direction)
                 end
             end
@@ -506,6 +565,17 @@ end)
 Lib.Menu:AddToggle(mainTab, "Silent Aim Team Check", true, function(state)
     silentAimTeamCheck = state
     notifyWithCooldown("Silent Aim Team Check " .. (state and "Enabled" or "Disabled"), 3)
+end)
+
+-- Слайдер для шанса попадания
+Lib.Menu:AddSlider(mainTab, "Silent Aim Hit Chance", 0, 100, 100, function(value)
+    silentAimHitChance = value
+    notifyWithCooldown("Silent Aim Hit Chance set to: " .. value .. "%", 3)
+end)
+
+-- Обновление круга FOV
+RunService.Heartbeat:Connect(function()
+    updateFovCircle()
 end)
 
 
