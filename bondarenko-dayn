@@ -416,36 +416,62 @@ Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip)
 -- Переменная для состояния бессмертия
 local isGodModeEnabled = false
 
+-- Функция для переключения бессмертия
 local function toggleGodMode(state)
     isGodModeEnabled = state
     local character = getCharacter(LocalPlayer)
-    if character then
-        if isGodModeEnabled then
-            local forceField = Instance.new("ForceField")
-            forceField.Parent = character
-            forceField.Name = "GodModeShield"
-            notifyWithCooldown("God Mode Enabled (Shield)", 3)
-        else
-            local existingShield = character:FindFirstChild("GodModeShield")
-            if existingShield then
-                existingShield:Destroy()
-            end
-            notifyWithCooldown("God Mode Disabled (Shield removed)", 3)
-        end
-    else
+    if not character then
         notifyWithCooldown("God Mode failed: Character not found", 3)
+        return
+    end
+
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not humanoid then
+        notifyWithCooldown("God Mode failed: Humanoid not found", 3)
+        return
+    end
+
+    if isGodModeEnabled then
+        humanoid.MaxHealth = math.huge
+        humanoid.Health = math.huge
+        notifyWithCooldown("God Mode Enabled", 3)
+    else
+        humanoid.MaxHealth = 100 -- Стандартное здоровье (может отличаться в игре)
+        humanoid.Health = 100
+        notifyWithCooldown("God Mode Disabled", 3)
     end
 end
 
 -- Добавляем переключатель в меню
-Lib.Menu:AddToggle(mainTab, "Enable God Mode", false, toggleGodMode)
+Lib.Menu:AddToggle(mainTab, "Enable God Mode", false, function(state)
+    toggleGodMode(state)
+end)
 
+-- Постоянное обновление состояния бессмертия
+RunService.RenderStepped:Connect(function()
+    if isGodModeEnabled then
+        local character = getCharacter(LocalPlayer)
+        if character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid and (humanoid.MaxHealth ~= math.huge or humanoid.Health ~= math.huge) then
+                humanoid.MaxHealth = math.huge
+                humanoid.Health = math.huge
+            end
+        end
+    end
+end)
+
+-- Применение при респавне
 LocalPlayer.CharacterAdded:Connect(function(character)
     if isGodModeEnabled then
-        local forceField = Instance.new("ForceField")
-        forceField.Parent = character
-        forceField.Name = "GodModeShield"
-        notifyWithCooldown("God Mode Shield reapplied after respawn", 3)
+        local humanoid = character:WaitForChild("Humanoid", 5) -- Ждём до 5 секунд
+        if humanoid then
+            humanoid.MaxHealth = math.huge
+            humanoid.Health = math.huge
+            notifyWithCooldown("God Mode reapplied after respawn", 3)
+        else
+            notifyWithCooldown("God Mode failed: Humanoid not loaded after respawn", 3)
+        end
     end
 end)
 
