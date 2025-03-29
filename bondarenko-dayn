@@ -424,20 +424,30 @@ local silentAimTeamCheck = true -- Проверка на команду
 local silentAimHitChance = 100 -- Шанс попадания (в процентах)
 local silentAimTargetPart = "Head" -- Часть тела для прицеливания
 local silentAimTarget = nil -- Текущая цель
-local fovCircle = Drawing.new("Circle") -- Круг FOV
+local fovCircle = nil -- Круг FOV
 
--- Настройка круга FOV
-fovCircle.Transparency = 1
-fovCircle.Thickness = 2
-fovCircle.Color = Color3.fromRGB(231, 84, 128)
-fovCircle.Filled = false
-fovCircle.NumSides = 12
+-- Инициализация круга FOV
+local function initializeFovCircle()
+    if not fovCircle then
+        fovCircle = Drawing.new("Circle")
+        fovCircle.Transparency = 1
+        fovCircle.Thickness = 2
+        fovCircle.Color = Color3.fromRGB(231, 84, 128)
+        fovCircle.Filled = false
+        fovCircle.NumSides = 12
+    end
+end
 
 -- Функция для обновления круга FOV
 local function updateFovCircle()
+    if not fovCircle then
+        initializeFovCircle()
+    end
+
+    local mousePos = UserInputService:GetMouseLocation()
     fovCircle.Visible = silentAimEnabled
     fovCircle.Radius = silentAimFOV * 3
-    fovCircle.Position = Vector2.new(Mouse.X, Mouse.Y + GuiService:GetGuiInset().Y)
+    fovCircle.Position = Vector2.new(mousePos.X, mousePos.Y)
 end
 
 -- Функция для проверки шанса попадания
@@ -505,7 +515,8 @@ local function findNearestEnemy()
         local partPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(targetPart.Position)
         if not onScreen then continue end
 
-        local magnitude = (Vector2.new(partPos.X, partPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+        local mousePos = UserInputService:GetMouseLocation()
+        local magnitude = (Vector2.new(partPos.X, partPos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
         if magnitude <= closestDistance * 3 and magnitude < closestDistance then
             closestDistance = magnitude
             closestEnemy = player
@@ -517,37 +528,49 @@ end
 
 -- Перехват Raycast для Silent Aim
 local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local args = {...}
-    local method = getnamecallmethod()
+local success, err = pcall(function()
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local args = {...}
+        local method = getnamecallmethod()
 
-    if silentAimEnabled and method == "FindPartOnRayWithIgnoreList" and self == Workspace then
-        -- Проверяем шанс попадания
-        if not calcChance(silentAimHitChance) then
-            return oldNamecall(self, ...)
-        end
+        if silentAimEnabled and method == "FindPartOnRayWithIgnoreList" and self == Workspace then
+            -- Проверяем шанс попадания
+            if not calcChance(silentAimHitChance) then
+                return oldNamecall(self, ...)
+            end
 
-        silentAimTarget = findNearestEnemy()
-        if silentAimTarget then
-            local targetCharacter = getCharacter(silentAimTarget)
-            if targetCharacter then
-                local targetPart = targetCharacter:FindFirstChild(silentAimTargetPart)
-                if targetPart then
-                    local origin = args[1].Origin
-                    local direction = (targetPart.Position - origin).Unit * 1000
-                    args[1] = Ray.new(origin, direction)
+            silentAimTarget = findNearestEnemy()
+            if silentAimTarget then
+                local targetCharacter = getCharacter(silentAimTarget)
+                if targetCharacter then
+                    local targetPart = targetCharacter:FindFirstChild(silentAimTargetPart)
+                    if targetPart then
+                        local origin = args[1].Origin
+                        local direction = (targetPart.Position - origin).Unit * 1000
+                        args[1] = Ray.new(origin, direction)
+                    end
                 end
             end
         end
-    end
 
-    return oldNamecall(self, unpack(args))
+        return oldNamecall(self, unpack(args))
+    end)
 end)
+
+-- Проверка успешности перехвата
+if not success then
+    notifyWithCooldown("Silent Aim failed: hookmetamethod not supported - " .. tostring(err), 5)
+end
 
 -- Переключатель для Silent Aim
 Lib.Menu:AddToggle(mainTab, "Enable Silent Aim", false, function(state)
     silentAimEnabled = state
     if state then
+        if not oldNamecall then
+            notifyWithCooldown("Silent Aim failed: hookmetamethod not supported", 5)
+            silentAimEnabled = false
+            return
+        end
         notifyWithCooldown("Silent Aim Enabled", 3)
     else
         silentAimTarget = nil
@@ -575,8 +598,17 @@ end)
 
 -- Обновление круга FOV
 RunService.Heartbeat:Connect(function()
-    updateFovCircle()
+    local success, err = pcall(updateFovCircle)
+    if not success then
+        notifyWithCooldown("FOV Circle error: " .. tostring(err), 5)
+    end
 end)
+
+-- Очистка при выходе
+LocalPlayer.CharacterAdded:Connect(function()
+    silentAimTarget = nil
+end)
+
 
 
 -- Секция: Utility
