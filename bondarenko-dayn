@@ -1,7 +1,7 @@
 -- MainScript.lua
 
 -- Подгрузка библиотеки по ссылке
- local Lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
+local Lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
 
 -- Подгрузка ESP-модуля
 local ESP
@@ -11,7 +11,7 @@ end)
 if not success or not ESP then
     Lib.Menu:Notify("Failed to load ESP module! Error: " .. (err or "Unknown error"), 5)
 else
-    Lib.Menu:Notify("ESP module loaded successfully!", 3)
+    Lib.Menu:Notify("ESP module loaded successfully", 3)
 end
 
 -- Подгрузка Fly-модуля
