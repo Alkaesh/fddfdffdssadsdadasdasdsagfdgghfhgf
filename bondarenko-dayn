@@ -442,7 +442,7 @@ local function toggleGodMode(state)
         -- Устанавливаем бесконечное здоровье
         humanoid.MaxHealth = math.huge
         humanoid.Health = math.huge
-        notifyWithCooldown("God Mode Enabled (Shield + Invulnerability)", 3)
+        notifyWithCooldown("God Mode Enabled (Full Invulnerability)", 3)
     else
         -- Удаляем щит
         local shield = character:FindFirstChild("GodModeShield")
@@ -450,7 +450,7 @@ local function toggleGodMode(state)
             shield:Destroy()
         end
         -- Возвращаем нормальное здоровье
-        humanoid.MaxHealth = 100 -- Стандартное значение, может отличаться
+        humanoid.MaxHealth = 100
         humanoid.Health = 100
         notifyWithCooldown("God Mode Disabled", 3)
     end
@@ -475,15 +475,17 @@ RunService.RenderStepped:Connect(function()
             end
             -- Поддерживаем бесконечное здоровье
             local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid and (humanoid.MaxHealth ~= math.huge or humanoid.Health ~= math.huge) then
-                humanoid.MaxHealth = math.huge
-                humanoid.Health = math.huge
+            if humanoid then
+                if humanoid.MaxHealth ~= math.huge or humanoid.Health ~= math.huge then
+                    humanoid.MaxHealth = math.huge
+                    humanoid.Health = math.huge
+                end
             end
         end
     end
 end)
 
--- Применение при респавне
+-- Применение при респавне и защита от урона
 LocalPlayer.CharacterAdded:Connect(function(character)
     if isGodModeEnabled then
         local humanoid = character:WaitForChild("Humanoid", 5)
@@ -498,6 +500,17 @@ LocalPlayer.CharacterAdded:Connect(function(character)
             -- Устанавливаем бесконечное здоровье
             humanoid.MaxHealth = math.huge
             humanoid.Health = math.huge
+            -- Перехватываем TakeDamage
+            local oldTakeDamage = humanoid.TakeDamage
+            humanoid.TakeDamage = function(self, amount)
+                if isGodModeEnabled then
+                    -- Блокируем урон
+                    humanoid.Health = math.huge
+                    return
+                end
+                -- Если выключено, применяем стандартный урон
+                oldTakeDamage(self, amount)
+            end
             notifyWithCooldown("God Mode reapplied after respawn", 3)
         else
             notifyWithCooldown("God Mode failed: Humanoid not loaded", 3)
@@ -505,6 +518,19 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     end
 end)
 
+-- Защита от смерти
+LocalPlayer.CharacterAdded:Connect(function(character)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if humanoid then
+        humanoid.Died:Connect(function()
+            if isGodModeEnabled then
+                -- Если умерли, сразу восстанавливаем
+                wait() -- Ждём кадр, чтобы сервер обработал смерть
+                humanoid.Health = math.huge
+            end
+        end)
+    end
+end)
 -- Секция: Utility
 Lib.Menu:AddSection(mainTab, "Utility")
 Lib.Menu:AddToggle(mainTab, "Enable Anti-AFK", false, toggleAntiAfk)
