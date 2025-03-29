@@ -1,12 +1,12 @@
 -- MainScript.lua
 
 -- Подгрузка библиотеки по ссылке
--- local Lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
+ local Lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
 
 -- Подгрузка ESP-модуля
 local ESP
 local success, err = pcall(function()
-   -- ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/esp-modul"))()
+    ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/esp-modul"))()
 end)
 if not success or not ESP then
     Lib.Menu:Notify("Failed to load ESP module! Error: " .. (err or "Unknown error"), 5)
