@@ -412,6 +412,101 @@ end
 -- Секция: Other Movement
 Lib.Menu:AddSection(mainTab, "Other Movement")
 Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip)
+-- Новая секция для Silent Aim
+Lib.Menu:AddSection(mainTab, "Silent Aim")
+
+-- Переменные для Silent Aim
+local silentAimEnabled = false
+local silentAimFOV = 100 -- Радиус действия (в studs)
+local silentAimTeamCheck = true -- Проверка на команду
+local silentAimTarget = nil -- Текущая цель
+
+-- Функция для поиска ближайшего врага
+local function findNearestEnemy()
+    local closestEnemy = nil
+    local closestDistance = silentAimFOV
+    local character = getCharacter(LocalPlayer)
+    if not character then return nil end
+
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return nil end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end -- Пропускаем себя
+
+        -- Проверка на команду
+        if silentAimTeamCheck and player.Team == LocalPlayer.Team then
+            continue
+        end
+
+        local targetCharacter = getCharacter(player)
+        if not targetCharacter then continue end
+
+        local targetRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
+        local targetHumanoid = targetCharacter:FindFirstChild("Humanoid")
+        if not targetRootPart or not targetHumanoid then continue end
+
+        -- Проверяем, жив ли враг
+        if targetHumanoid.Health <= 0 then continue end
+
+        -- Проверяем расстояние
+        local distance = (rootPart.Position - targetRootPart.Position).Magnitude
+        if distance <= closestDistance then
+            closestDistance = distance
+            closestEnemy = player
+        end
+    end
+
+    return closestEnemy
+end
+
+-- Функция для перехвата Raycast (лучей)
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
+    local method = getnamecallmethod()
+
+    if silentAimEnabled and method == "FindPartOnRayWithIgnoreList" and self == Workspace then
+        silentAimTarget = findNearestEnemy()
+        if silentAimTarget then
+            local targetCharacter = getCharacter(silentAimTarget)
+            if targetCharacter then
+                local targetHead = targetCharacter:FindFirstChild("Head")
+                if targetHead then
+                    -- Перенаправляем луч на голову врага
+                    local origin = args[1].Origin
+                    local direction = (targetHead.Position - origin).Unit * 1000
+                    args[1] = Ray.new(origin, direction)
+                end
+            end
+        end
+    end
+
+    return oldNamecall(self, unpack(args))
+end)
+
+-- Переключатель для Silent Aim
+Lib.Menu:AddToggle(mainTab, "Enable Silent Aim", false, function(state)
+    silentAimEnabled = state
+    if state then
+        notifyWithCooldown("Silent Aim Enabled", 3)
+    else
+        silentAimTarget = nil
+        notifyWithCooldown("Silent Aim Disabled", 3)
+    end
+end)
+
+-- Слайдер для настройки FOV
+Lib.Menu:AddSlider(mainTab, "Silent Aim FOV", 50, 500, 100, function(value)
+    silentAimFOV = value
+    notifyWithCooldown("Silent Aim FOV set to: " .. value, 3)
+end)
+
+-- Переключатель для проверки команды
+Lib.Menu:AddToggle(mainTab, "Silent Aim Team Check", true, function(state)
+    silentAimTeamCheck = state
+    notifyWithCooldown("Silent Aim Team Check " .. (state and "Enabled" or "Disabled"), 3)
+end)
 
 
 -- Секция: Utility
