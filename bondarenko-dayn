@@ -416,24 +416,21 @@ Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip)
 -- Переменная для состояния бессмертия
 local isGodModeEnabled = false
 
--- Функция для переключения бессмертия
 local function toggleGodMode(state)
     isGodModeEnabled = state
     local character = getCharacter(LocalPlayer)
     if character then
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid then
-            if isGodModeEnabled then
-                humanoid.MaxHealth = math.huge -- Бесконечное максимальное здоровье
-                humanoid.Health = math.huge -- Бесконечное текущее здоровье
-                notifyWithCooldown("God Mode Enabled", 3)
-            else
-                humanoid.MaxHealth = 100 -- Возвращаем стандартное значение (может отличаться в играх)
-                humanoid.Health = 100 -- Сбрасываем здоровье до нормы
-                notifyWithCooldown("God Mode Disabled", 3)
-            end
+        if isGodModeEnabled then
+            local forceField = Instance.new("ForceField")
+            forceField.Parent = character
+            forceField.Name = "GodModeShield"
+            notifyWithCooldown("God Mode Enabled (Shield)", 3)
         else
-            notifyWithCooldown("God Mode failed: Humanoid not found", 3)
+            local existingShield = character:FindFirstChild("GodModeShield")
+            if existingShield then
+                existingShield:Destroy()
+            end
+            notifyWithCooldown("God Mode Disabled (Shield removed)", 3)
         end
     else
         notifyWithCooldown("God Mode failed: Character not found", 3)
@@ -443,13 +440,12 @@ end
 -- Добавляем переключатель в меню
 Lib.Menu:AddToggle(mainTab, "Enable God Mode", false, toggleGodMode)
 
--- Обновление бессмертия при респавне
 LocalPlayer.CharacterAdded:Connect(function(character)
     if isGodModeEnabled then
-        local humanoid = character:WaitForChild("Humanoid")
-        humanoid.MaxHealth = math.huge
-        humanoid.Health = math.huge
-        notifyWithCooldown("God Mode reapplied after respawn", 3)
+        local forceField = Instance.new("ForceField")
+        forceField.Parent = character
+        forceField.Name = "GodModeShield"
+        notifyWithCooldown("God Mode Shield reapplied after respawn", 3)
     end
 end)
 
