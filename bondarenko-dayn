@@ -483,6 +483,77 @@ Lib.Menu:AddDropdown(teleportTab, "Teleport Key", {"LeftControl", "LeftAlt", "Le
     end
 end)
 
+-- Переменные для частиц
+local particlesEnabled = false
+local particleEmitter = nil
+local particleColor = Color3.fromRGB(255, 0, 0) -- Цвет частиц по умолчанию (красный)
+local particleRate = 50 -- Скорость появления частиц
+
+-- Функция для создания и управления частицами
+local function toggleParticles(state)
+    particlesEnabled = state
+    local character = getCharacter(LocalPlayer)
+    
+    if particlesEnabled then
+        if character then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                -- Создаем ParticleEmitter
+                particleEmitter = Instance.new("ParticleEmitter")
+                particleEmitter.Texture = "rbxassetid://243098098" -- Текстура искр (можно заменить)
+                particleEmitter.Size = NumberSequence.new(0.5) -- Размер частиц
+                particleEmitter.Transparency = NumberSequence.new(0, 1) -- Прозрачность (от 0 до 1)
+                particleEmitter.Lifetime = NumberRange.new(1, 2) -- Время жизни частиц
+                particleEmitter.Rate = particleRate -- Скорость появления частиц
+                particleEmitter.Speed = NumberRange.new(5, 10) -- Скорость движения частиц
+                particleEmitter.SpreadAngle = Vector2.new(360, 360) -- Распространение частиц (по всем направлениям)
+                particleEmitter.Color = ColorSequence.new(particleColor) -- Цвет частиц
+                particleEmitter.Parent = rootPart
+                notifyWithCooldown("Particle Effect Enabled", 3)
+            else
+                notifyWithCooldown("Cannot enable particles: No HumanoidRootPart found", 3)
+                particlesEnabled = false
+            end
+        else
+            notifyWithCooldown("Cannot enable particles: Character not found", 3)
+            particlesEnabled = false
+        end
+    else
+        -- Отключаем частицы
+        if particleEmitter then
+            particleEmitter:Destroy()
+            particleEmitter = nil
+        end
+        notifyWithCooldown("Particle Effect Disabled", 3)
+    end
+end
+
+-- Обновляем частицы при респавне
+LocalPlayer.CharacterAdded:Connect(function(character)
+    if particlesEnabled then
+        wait(0.1) -- Даем время на загрузку персонажа
+        toggleParticles(false) -- Отключаем старые частицы
+        toggleParticles(true) -- Включаем новые частицы
+    end
+end)
+
+-- Добавляем секцию для частиц в UI
+Lib.Menu:AddSection(mainTab, "Visual Effects")
+Lib.Menu:AddToggle(mainTab, "Enable Particles", false, toggleParticles)
+Lib.Menu:AddSlider(mainTab, "Particle Rate", 10, 100, 50, function(value)
+    particleRate = value
+    if particleEmitter then
+        particleEmitter.Rate = particleRate
+    end
+    notifyWithCooldown("Particle Rate set to: " .. value, 3)
+end)
+Lib.Menu:AddColorPicker(mainTab, "Particle Color", particleColor, function(color)
+    particleColor = color
+    if particleEmitter then
+        particleEmitter.Color = ColorSequence.new(particleColor)
+    end
+    notifyWithCooldown("Particle Color updated", 3)
+end)
 -- === Вкладка ESP (если модуль доступен) ===
 if ESP then
     -- Секция: General ESP Settings
