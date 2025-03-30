@@ -577,10 +577,10 @@ local function handleChatCommand(message)
     -- Приводим сообщение к нижнему регистру для игнорирования регистра
     local lowerMessage = message:lower()
     
-    -- Проверяем, начинается ли сообщение с /tp
-    if lowerMessage:find("^/tp%s+") then
-        -- Извлекаем ник после /tp
-        local playerName = message:match("^/tp%s+(.+)$")
+    -- Проверяем, начинается ли сообщение с го
+    if lowerMessage:find("^го%s+") then
+        -- Извлекаем ник после г
+        local playerName = message:match("^го%s+(.+)$")
         if playerName then
             -- Убираем пробелы в начале и конце
             playerName = playerName:match("^%s*(.-)%s*$")
@@ -588,10 +588,10 @@ local function handleChatCommand(message)
                 -- Вызываем существующую функцию телепортации
                 teleportToPlayer(playerName)
             else
-                notifyWithCooldown("Please provide a player name after /tp", 3)
+                notifyWithCooldown("Please provide a player name after го", 3)
             end
         else
-            notifyWithCooldown("Invalid /tp command. Usage: /tp <player>", 3)
+            notifyWithCooldown("Invalid г command. Usage: го <player>", 3)
         end
     end
 end
