@@ -554,6 +554,110 @@ Lib.Menu:AddColorPicker(mainTab, "Particle Color", particleColor, function(color
     end
     notifyWithCooldown("Particle Color updated", 3)
 end)
+
+-- Переменные для вращающегося объекта
+local rotationEffectEnabled = false
+local rotationPart = nil
+local rotationSpeed = 2 -- Скорость вращения (радианы в секунду)
+local rotationRadius = 5 -- Радиус вращения
+local rotationHeight = 2 -- Высота над персонажем
+local rotationColor = Color3.fromRGB(0, 255, 255) -- Цвет объекта (голубой)
+
+-- Функция для создания и управления вращающимся объектом
+local function toggleRotationEffect(state)
+    rotationEffectEnabled = state
+    local character = getCharacter(LocalPlayer)
+    
+    if rotationEffectEnabled then
+        if character then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                -- Создаем вращающийся объект
+                rotationPart = Instance.new("Part")
+                rotationPart.Size = Vector3.new(1, 1, 1)
+                rotationPart.Position = rootPart.Position + Vector3.new(0, rotationHeight, 0)
+                rotationPart.Anchored = true
+                rotationPart.CanCollide = false
+                rotationPart.Transparency = 0.5
+                rotationPart.BrickColor = BrickColor.new(rotationColor)
+                rotationPart.Shape = Enum.PartType.Ball
+                rotationPart.Parent = Workspace
+                
+                -- Добавляем свечение (опционально)
+                local pointLight = Instance.new("PointLight")
+                pointLight.Color = rotationColor
+                pointLight.Range = 10
+                pointLight.Brightness = 1
+                pointLight.Parent = rotationPart
+                
+                -- Запускаем вращение
+                local angle = 0
+                RunService.RenderStepped:Connect(function(deltaTime)
+                    if not rotationEffectEnabled or not rotationPart or not rootPart.Parent then
+                        if rotationPart then
+                            rotationPart:Destroy()
+                            rotationPart = nil
+                        end
+                        return
+                    end
+                    angle = angle + rotationSpeed * deltaTime
+                    local offset = Vector3.new(math.cos(angle) * rotationRadius, rotationHeight, math.sin(angle) * rotationRadius)
+                    rotationPart.Position = rootPart.Position + offset
+                end)
+                notifyWithCooldown("Rotation Effect Enabled", 3)
+            else
+                notifyWithCooldown("Cannot enable rotation effect: No HumanoidRootPart found", 3)
+                rotationEffectEnabled = false
+            end
+        else
+            notifyWithCooldown("Cannot enable rotation effect: Character not found", 3)
+            rotationEffectEnabled = false
+        end
+    else
+        -- Отключаем эффект
+        if rotationPart then
+            rotationPart:Destroy()
+            rotationPart = nil
+        end
+        notifyWithCooldown("Rotation Effect Disabled", 3)
+    end
+end
+
+-- Обновляем эффект при респавне
+LocalPlayer.CharacterAdded:Connect(function(character)
+    if rotationEffectEnabled then
+        wait(0.1) -- Даем время на загрузку персонажа
+        toggleRotationEffect(false) -- Отключаем старый эффект
+        toggleRotationEffect(true) -- Включаем новый эффект
+    end
+end)
+
+-- Добавляем настройки для вращающегося объекта в UI
+Lib.Menu:AddToggle(mainTab, "Enable Rotation Effect", false, toggleRotationEffect)
+Lib.Menu:AddSlider(mainTab, "Rotation Speed", 1, 5, 2, function(value)
+    rotationSpeed = value
+    notifyWithCooldown("Rotation Speed set to: " .. value, 3)
+end)
+Lib.Menu:AddSlider(mainTab, "Rotation Radius", 3, 10, 5, function(value)
+    rotationRadius = value
+    notifyWithCooldown("Rotation Radius set to: " .. value, 3)
+end)
+Lib.Menu:AddSlider(mainTab, "Rotation Height", 0, 5, 2, function(value)
+    rotationHeight = value
+    notifyWithCooldown("Rotation Height set to: " .. value, 3)
+end)
+Lib.Menu:AddColorPicker(mainTab, "Rotation Color", rotationColor, function(color)
+    rotationColor = color
+    if rotationPart then
+        rotationPart.BrickColor = BrickColor.new(rotationColor)
+        local pointLight = rotationPart:FindFirstChild("PointLight")
+        if pointLight then
+            pointLight.Color = rotationColor
+        end
+    end
+    notifyWithCooldown("Rotation Color updated", 3)
+end)
+
 -- === Вкладка ESP (если модуль доступен) ===
 if ESP then
     -- Секция: General ESP Settings
