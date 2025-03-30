@@ -567,3 +567,59 @@ UserInputService.InputBegan:Connect(function(input)
         end
     end
 end)
+
+-- Поддержка новой системы чата (TextChatService)
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Функция для обработки команды /tp
+local function handleChatCommand(message)
+    -- Приводим сообщение к нижнему регистру для игнорирования регистра
+    local lowerMessage = message:lower()
+    
+    -- Проверяем, начинается ли сообщение с /tp
+    if lowerMessage:find("^/tp%s+") then
+        -- Извлекаем ник после /tp
+        local playerName = message:match("^/tp%s+(.+)$")
+        if playerName then
+            -- Убираем пробелы в начале и конце
+            playerName = playerName:match("^%s*(.-)%s*$")
+            if playerName ~= "" then
+                -- Вызываем существующую функцию телепортации
+                teleportToPlayer(playerName)
+            else
+                notifyWithCooldown("Please provide a player name after /tp", 3)
+            end
+        else
+            notifyWithCooldown("Invalid /tp command. Usage: /tp <player>", 3)
+        end
+    end
+end
+
+-- Проверяем, какая система чата используется
+if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+    -- Новая система чата (TextChatService)
+    TextChatService.MessageReceived:Connect(function(messageData)
+        local speaker = messageData.TextSource
+        if speaker then
+            local player = Players:GetPlayerByUserId(speaker.UserId)
+            if player == LocalPlayer then
+                handleChatCommand(messageData.Text)
+            end
+        end
+    end)
+else
+    -- Старая система чата (DefaultChatSystemChatEvents)
+    local chatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 5)
+    if chatEvents then
+        chatEvents.OnMessageDoneFiltering:Connect(function(messageData)
+            local speaker = messageData.FromSpeaker
+            local player = Players:FindFirstChild(speaker)
+            if player == LocalPlayer then
+                handleChatCommand(messageData.Message)
+            end
+        end)
+    else
+        notifyWithCooldown("Chat system not found. /tp command may not work.", 5)
+    end
+end
