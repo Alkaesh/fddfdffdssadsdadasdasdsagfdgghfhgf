@@ -145,6 +145,33 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- Переменные для Infinite Jump
+local infiniteJumpEnabled = false
+
+-- Функция для Infinite Jump
+local function toggleInfiniteJump(state)
+    infiniteJumpEnabled = state
+    if infiniteJumpEnabled then
+        UserInputService.JumpRequest:Connect(function()
+            if infiniteJumpEnabled then
+                local character = getCharacter(LocalPlayer)
+                if character then
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    if humanoid then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                end
+            end
+        end)
+        notifyWithCooldown("Infinite Jump Enabled", 3)
+    else
+        notifyWithCooldown("Infinite Jump Disabled", 3)
+    end
+end
+
+
+Lib.Menu:AddToggle(mainTab, "Enable Infinite Jump", false, toggleInfiniteJump)
+
 -- Функция для Anti-AFK
 local function toggleAntiAfk(state)
     antiAfkEnabled = state
