@@ -1,699 +1,202 @@
--- MainScript.lua
+-- Скрипт для запуска скримера в Roblox
 
--- Подгрузка библиотеки по ссылке
-local Lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
-
--- Подгрузка ESP-модуля
-local ESP
-local success, err = pcall(function()
-    ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/esp-modul"))()
-end)
-if not success or not ESP then
-    Lib.Menu:Notify("Failed to load ESP module! Error: " .. (err or "Unknown error"), 5)
-else
-    Lib.Menu:Notify("ESP module loaded successfully", 3)
-end
-
--- Подгрузка Fly-модуля
-local Fly
-local success, err = pcall(function()
-    Fly = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/fly-modul"))()
-end)
-if not success or not Fly then
-    Lib.Menu:Notify("Failed to load Fly module! Error: " .. (err or "Unknown error"), 5)
-else
-    Lib.Menu:Notify("Fly module loaded successfully!", 3)
-end
-
--- Основные сервисы
+-- Получаем необходимые сервисы
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
--- Создаем меню
-local menu = Lib.Menu:CreateMenu("Za Xoxlov")
-
--- Вкладки
-local mainTab = Lib.Menu:AddTab(menu, "Main")
-local teleportTab = Lib.Menu:AddTab(menu, "Teleport")
-local espTab = ESP and Lib.Menu:AddTab(menu, "ESP") -- Создаем вкладку ESP только если модуль загрузился
-
--- Переменные для функционала
-local speedEnabled = false
-local jumpEnabled = false
-local sliderSpeed = 16 -- Значение слайдера для скорости
-local sliderJumpPower = 50 -- Значение слайдера для прыжка
-local currentSpeed = 16 -- Текущее применяемое значение скорости
-local currentJumpPower = 50 -- Текущее применяемое значение прыжка
-local defaultSpeed = 16 -- Дефолтное значение скорости (зависит от сервера)
-local defaultJumpPower = 50 -- Дефолтное значение прыжка (зависит от сервера)
-local teleportOnClickEnabled = false
-local teleportKey = Enum.KeyCode.LeftControl -- Клавиша для телепорта по клику
-local isNoclipEnabled = false
-local noclipConnection -- Для хранения соединения RunService.Stepped
-local antiAfkEnabled = false
-
--- Переменные для управления уведомлениями (debounce)
-local lastNotificationTime = 0
-local notificationCooldown = 1 -- Задержка между уведомлениями (в секундах)
-
--- Функция для показа уведомлений с задержкой
-local function notifyWithCooldown(message, duration)
-    local currentTime = tick()
-    if currentTime - lastNotificationTime >= notificationCooldown then
-        Lib.Menu:Notify(message, duration)
-        lastNotificationTime = currentTime
-    end
-end
-
--- Функция для получения персонажа
-local function getCharacter(player)
-    return player.Character
-end
-
--- Сохраняем начальные значения скорости и прыжка
-local function updateDefaultValues()
-    local character = getCharacter(LocalPlayer)
-    if character then
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid then
-            defaultSpeed = humanoid.WalkSpeed
-            defaultJumpPower = humanoid.JumpPower
-            if not speedEnabled then
-                currentSpeed = defaultSpeed
-                sliderSpeed = defaultSpeed
-            end
-            if not jumpEnabled then
-                currentJumpPower = defaultJumpPower
-                sliderJumpPower = defaultJumpPower
-            end
-        end
-    end
-end
-
--- Вызываем при загрузке скрипта
-updateDefaultValues()
-
--- Обновляем начальные значения при респавне
-LocalPlayer.CharacterAdded:Connect(function(character)
-    updateDefaultValues()
-    local humanoid = character:WaitForChild("Humanoid")
-    if speedEnabled then
-        currentSpeed = sliderSpeed
-        humanoid.WalkSpeed = currentSpeed
-        notifyWithCooldown("Speedhack applied after respawn: " .. currentSpeed, 3)
-    else
-        humanoid.WalkSpeed = defaultSpeed
-    end
-    if jumpEnabled then
-        currentJumpPower = sliderJumpPower
-        humanoid.JumpPower = currentJumpPower
-        notifyWithCooldown("Jump Power applied after respawn: " .. currentJumpPower, 3)
-    else
-        humanoid.JumpPower = defaultJumpPower
-    end
-end)
-
--- Постоянное обновление скорости и прыжка
-RunService.RenderStepped:Connect(function()
-    local character = getCharacter(LocalPlayer)
-    if character then
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid then
-            if speedEnabled then
-                if humanoid.WalkSpeed ~= currentSpeed then
-                    humanoid.WalkSpeed = currentSpeed
-                end
-            else
-                if humanoid.WalkSpeed ~= defaultSpeed then
-                    humanoid.WalkSpeed = defaultSpeed
-                end
-            end
-            if jumpEnabled then
-                if humanoid.JumpPower ~= currentJumpPower then
-                    humanoid.JumpPower = currentJumpPower
-                end
-            else
-                if humanoid.JumpPower ~= defaultJumpPower then
-                    humanoid.JumpPower = defaultJumpPower
-                end
-            end
-        end
-    end
-end)
-
-
--- Функция для Anti-AFK
-local function toggleAntiAfk(state)
-    antiAfkEnabled = state
-    if antiAfkEnabled then
-        spawn(function()
-            while antiAfkEnabled do
-                local character = getCharacter(LocalPlayer)
-                if character then
-                    local rootPart = character:FindFirstChild("HumanoidRootPart")
-                    if rootPart then
-                        rootPart.CFrame = rootPart.CFrame + Vector3.new(0.1, 0, 0)
-                        wait(0.1)
-                        rootPart.CFrame = rootPart.CFrame - Vector3.new(0.1, 0, 0)
-                    end
-                end
-                wait(10)
-            end
-        end)
-        notifyWithCooldown("Anti-AFK Enabled", 3)
-    else
-        notifyWithCooldown("Anti-AFK Disabled", 3)
-    end
-end
-
--- Функция для Noclip
-local function toggleNoclip(state)
-    isNoclipEnabled = state
-    if isNoclipEnabled then
-        noclipConnection = RunService.Stepped:Connect(function()
-            if isNoclipEnabled then
-                local character = getCharacter(LocalPlayer)
-                if character then
-                    for _, part in pairs(character:GetChildren()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            else
-                if noclipConnection then
-                    noclipConnection:Disconnect()
-                end
-            end
-        end)
-        notifyWithCooldown("Noclip Enabled", 3)
-    else
-        local character = getCharacter(LocalPlayer)
-        if character then
-            for _, part in pairs(character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-        end
-        if noclipConnection then
-            noclipConnection:Disconnect()
-            noclipConnection = nil
-        end
-        notifyWithCooldown("Noclip Disabled", 3)
-    end
-end
-
--- Функция для телепортации к игроку с частичным совпадением ника
-local function teleportToPlayer(partialName)
-    if not partialName or partialName == "" then
-        notifyWithCooldown("Please enter a player name!", 3)
-        return
-    end
-
-    partialName = partialName:lower()
-    local matchingPlayers = {}
-
-    for _, player in pairs(Players:GetPlayers()) do
-        local playerNameLower = player.Name:lower()
-        if playerNameLower:sub(1, #partialName) == partialName then
-            table.insert(matchingPlayers, player)
-        end
-    end
-
-    if #matchingPlayers == 0 then
-        notifyWithCooldown("No players found with name starting with: " .. partialName, 3)
-    elseif #matchingPlayers == 1 then
-        local targetPlayer = matchingPlayers[1]
-        local character = getCharacter(LocalPlayer)
-        local targetCharacter = getCharacter(targetPlayer)
-        if character and targetCharacter then
-            local rootPart = character:FindFirstChild("HumanoidRootPart")
-            local targetRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
-            if rootPart and targetRootPart then
-                rootPart.CFrame = targetRootPart.CFrame
-                notifyWithCooldown("Teleported to " .. targetPlayer.Name, 3)
-            else
-                notifyWithCooldown("Could not teleport: Player or target has no HumanoidRootPart", 3)
-            end
-        else
-            notifyWithCooldown("Could not teleport: Player or target character not found", 3)
-        end
-    else
-        local playerList = "Multiple players found: "
-        for i, player in ipairs(matchingPlayers) do
-            playerList = playerList .. player.Name
-            if i < #matchingPlayers then
-                playerList = playerList .. ", "
-            end
-        end
-        notifyWithCooldown(playerList .. " - please be more specific.", 5)
-    end
-end
-
--- Функция для телепортации по клику
-local function teleportToClickPosition()
-    local character = getCharacter(LocalPlayer)
-    if not character then
-        notifyWithCooldown("Could not teleport: Character not found", 3)
-        return
-    end
-
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then
-        notifyWithCooldown("Could not teleport: No HumanoidRootPart found", 3)
-        return
-    end
-
-    local mouseHit = Mouse.Hit
-    if mouseHit then
-        local wasNoclipEnabled = isNoclipEnabled
-        toggleNoclip(true)
-        rootPart.CFrame = CFrame.new(mouseHit.Position + Vector3.new(0, 3, 0))
-        wait(0.1)
-        toggleNoclip(wasNoclipEnabled)
-        notifyWithCooldown("Teleported to click position", 2)
-    else
-        notifyWithCooldown("Could not teleport: Invalid click position", 3)
-    end
-end
-
--- Обработка клика для телепортации
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    if gameProcessedEvent then return end
-
-    if teleportOnClickEnabled and input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if UserInputService:IsKeyDown(teleportKey) then
-            teleportToClickPosition()
-        end
-    end
-end)
-
--- === Вкладка Main ===
--- Секция: Speed and Jump
-Lib.Menu:AddSection(mainTab, "Speed and Jump")
-Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
-    speedEnabled = state
-    if state then
-        currentSpeed = sliderSpeed
-        local character = getCharacter(LocalPlayer)
-        if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = currentSpeed
-                notifyWithCooldown("Speedhack Enabled - Speed: " .. currentSpeed, 3)
-            else
-                notifyWithCooldown("Speedhack failed: Humanoid not found", 3)
-            end
-        else
-            notifyWithCooldown("Speedhack failed: Character not found", 3)
-        end
-    else
-        currentSpeed = defaultSpeed
-        local character = getCharacter(LocalPlayer)
-        if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = defaultSpeed
-                notifyWithCooldown("Speedhack Disabled - Speed reset to: " .. defaultSpeed, 3)
-            end
-        end
-    end
-end)
-Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, defaultSpeed, function(value)
-    sliderSpeed = value
-    if speedEnabled then
-        currentSpeed = sliderSpeed
-        local character = getCharacter(LocalPlayer)
-        if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = currentSpeed
-                notifyWithCooldown("Speed set to: " .. value, 3)
-            else
-                notifyWithCooldown("Speedhack failed: Humanoid not found", 3)
-            end
-        else
-            notifyWithCooldown("Speedhack failed: Character not found", 3)
-        end
-    else
-        notifyWithCooldown("Enable Speedhack to apply speed", 3)
-    end
-end)
-Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
-    jumpEnabled = state
-    if state then
-        currentJumpPower = sliderJumpPower
-        local character = getCharacter(LocalPlayer)
-        if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-                humanoid.JumpPower = currentJumpPower
-                notifyWithCooldown("Jump Power Enabled - Jump: " .. currentJumpPower, 3)
-            else
-                notifyWithCooldown("Jump Power failed: Humanoid not found", 3)
-            end
-        else
-            notifyWithCooldown("Jump Power failed: Character not found", 3)
-        end
-    else
-        currentJumpPower = defaultJumpPower
-        local character = getCharacter(LocalPlayer)
-        if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-                humanoid.JumpPower = defaultJumpPower
-                notifyWithCooldown("Jump Power Disabled - Jump reset to: " .. defaultJumpPower, 3)
-            end
-        end
-    end
-end)
-Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, defaultJumpPower, function(value)
-    sliderJumpPower = value
-    if jumpEnabled then
-        currentJumpPower = sliderJumpPower
-        local character = getCharacter(LocalPlayer)
-        if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-                humanoid.JumpPower = currentJumpPower
-                notifyWithCooldown("Jump Power set to: " .. value, 3)
-            else
-                notifyWithCooldown("Jump Power failed: Humanoid not found", 3)
-            end
-        else
-            notifyWithCooldown("Jump Power failed: Character not found", 3)
-        end
-    else
-        notifyWithCooldown("Enable Jump Power to apply jump power", 3)
-    end
-end)
-
--- Переменные для Infinite Jump
-local infiniteJumpEnabled = false
-
--- Функция для Infinite Jump
-local function toggleInfiniteJump(state)
-    infiniteJumpEnabled = state
-    if infiniteJumpEnabled then
-        UserInputService.JumpRequest:Connect(function()
-            if infiniteJumpEnabled then
-                local character = getCharacter(LocalPlayer)
-                if character then
-                    local humanoid = character:FindFirstChild("Humanoid")
-                    if humanoid then
-                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                end
-            end
-        end)
-        notifyWithCooldown("Infinite Jump Enabled", 3)
-    else
-        notifyWithCooldown("Infinite Jump Disabled", 3)
-    end
-end
-
-
-Lib.Menu:AddToggle(mainTab, "Enable Infinite Jump", false, toggleInfiniteJump)
-
-
--- Секция: Fly (если модуль доступен)
-if Fly then
-    Lib.Menu:AddSection(mainTab, "Fly Settings")
-    Lib.Menu:AddToggle(mainTab, "Enable Fly", false, function(state)
-        local success, message = Fly:ToggleFly(state)
-        if success then
-            notifyWithCooldown(message, 3)
-        else
-            notifyWithCooldown("Fly Error: " .. message, 3)
-        end
-    end)
-    Lib.Menu:AddSlider(mainTab, "Fly Speed", 50, 200, 50, function(value)
-        Fly.flySpeed = value
-        notifyWithCooldown("Fly Speed set to: " .. value, 3)
-    end)
-end
-
--- Секция: Other Movement
-Lib.Menu:AddSection(mainTab, "Other Movement")
-Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip)
-
-
-
-
-
--- Секция: Utility
-Lib.Menu:AddSection(mainTab, "Utility")
-Lib.Menu:AddToggle(mainTab, "Enable Anti-AFK", false, toggleAntiAfk)
-
--- === Вкладка Teleport ===
--- Секция: Teleport to Player
-Lib.Menu:AddSection(teleportTab, "Teleport to Player")
-local teleportTextBox = Lib.Menu:AddTextBox(teleportTab, "Player Name (First Letters)", "", function(playerName)
-    teleportToPlayer(playerName)
-end)
-Lib.Menu:AddButton(teleportTab, "Teleport to Player", function()
-    teleportToPlayer(teleportTextBox.Text)
-end)
-
--- Секция: Teleport on Click
-Lib.Menu:AddSection(teleportTab, "Teleport on Click")
-Lib.Menu:AddToggle(teleportTab, "Enable Teleport on Click", false, function(state)
-    teleportOnClickEnabled = state
-    if state then
-        notifyWithCooldown("Teleport on Click Enabled (" .. teleportKey.Name .. " + Click)", 3)
-    else
-        notifyWithCooldown("Teleport on Click Disabled", 3)
-    end
-end)
-Lib.Menu:AddDropdown(teleportTab, "Teleport Key", {"LeftControl", "LeftAlt", "LeftShift"}, "LeftControl", function(key)
-    if key == "LeftControl" then
-        teleportKey = Enum.KeyCode.LeftControl
-    elseif key == "LeftAlt" then
-        teleportKey = Enum.KeyCode.LeftAlt
-    elseif key == "LeftShift" then
-        teleportKey = Enum.KeyCode.LeftShift
-    end
-    if teleportOnClickEnabled then
-        notifyWithCooldown("Teleport Key changed to: " .. key, 3)
-    end
-end)
-
--- Переменные для частиц
-local particlesEnabled = false
-local particleEmitter = nil
-local particleColor = Color3.fromRGB(255, 0, 0) -- Цвет частиц по умолчанию (красный)
-local particleRate = 50 -- Скорость появления частиц
-
--- Функция для создания и управления частицами
-local function toggleParticles(state)
-    particlesEnabled = state
-    local character = getCharacter(LocalPlayer)
+-- Функция для создания скримера
+local function showScreamer()
+    -- Создаем полноэкранный интерфейс
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "Screamer"
+    screenGui.IgnoreGuiInset = true
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.DisplayOrder = 999999 -- Высокий приоритет отображения
     
-    if particlesEnabled then
-        if character then
-            local rootPart = character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                -- Создаем ParticleEmitter
-                particleEmitter = Instance.new("ParticleEmitter")
-                particleEmitter.Texture = "rbxassetid://243098098" -- Текстура искр (можно заменить)
-                particleEmitter.Size = NumberSequence.new(0.5) -- Размер частиц
-                particleEmitter.Transparency = NumberSequence.new(0, 1) -- Прозрачность (от 0 до 1)
-                particleEmitter.Lifetime = NumberRange.new(1, 2) -- Время жизни частиц
-                particleEmitter.Rate = particleRate -- Скорость появления частиц
-                particleEmitter.Speed = NumberRange.new(5, 10) -- Скорость движения частиц
-                particleEmitter.SpreadAngle = Vector2.new(360, 360) -- Распространение частиц (по всем направлениям)
-                particleEmitter.Color = ColorSequence.new(particleColor) -- Цвет частиц
-                particleEmitter.Parent = rootPart
-                notifyWithCooldown("Particle Effect Enabled", 3)
-            else
-                notifyWithCooldown("Cannot enable particles: No HumanoidRootPart found", 3)
-                particlesEnabled = false
-            end
-        else
-            notifyWithCooldown("Cannot enable particles: Character not found", 3)
-            particlesEnabled = false
-        end
-    else
-        -- Отключаем частицы
-        if particleEmitter then
-            particleEmitter:Destroy()
-            particleEmitter = nil
-        end
-        notifyWithCooldown("Particle Effect Disabled", 3)
-    end
-end
-
--- Обновляем частицы при респавне
-LocalPlayer.CharacterAdded:Connect(function(character)
-    if particlesEnabled then
-        wait(0.1) -- Даем время на загрузку персонажа
-        toggleParticles(false) -- Отключаем старые частицы
-        toggleParticles(true) -- Включаем новые частицы
-    end
-end)
-
--- Добавляем секцию для частиц в UI
-Lib.Menu:AddSection(mainTab, "Visual Effects")
-Lib.Menu:AddToggle(mainTab, "Enable Particles", false, toggleParticles)
-Lib.Menu:AddSlider(mainTab, "Particle Rate", 10, 100, 50, function(value)
-    particleRate = value
-    if particleEmitter then
-        particleEmitter.Rate = particleRate
-    end
-    notifyWithCooldown("Particle Rate set to: " .. value, 3)
-end)
-Lib.Menu:AddColorPicker(mainTab, "Particle Color", particleColor, function(color)
-    particleColor = color
-    if particleEmitter then
-        particleEmitter.Color = ColorSequence.new(particleColor)
-    end
-    notifyWithCooldown("Particle Color updated", 3)
-end)
-
-
-
--- === Вкладка ESP (если модуль доступен) ===
-if ESP then
-    -- Секция: General ESP Settings
-    Lib.Menu:AddSection(espTab, "General ESP Settings")
-    Lib.Menu:AddToggle(espTab, "Enable ESP", true, function(state)
-        ESP.espEnabled = state
-        notifyWithCooldown("ESP " .. (state and "Enabled" or "Disabled"), 3)
-    end)
--- Секция: Box Toggle
-Lib.Menu:AddToggle(espTab, "Enable Boxes", true, function(state)
-    ESP.boxesEnabled = state
-    notifyWithCooldown("Boxes " .. (state and "Enabled" or "Disabled"), 3)
-end)
-    Lib.Menu:AddToggle(espTab, "Enable Team Check", true, function(state)
-        ESP.teamCheckEnabled = state
-        notifyWithCooldown("Team Check " .. (state and "Enabled" or "Disabled"), 3)
-    end)
-    Lib.Menu:AddSlider(espTab, "ESP Distance", 100, 3000, 3000, function(value)
-        ESP.espMaxDistance = value
-        notifyWithCooldown("ESP Distance set to: " .. value .. " studs", 3)
-    end)
-
-    -- Секция: Tracers Settings
-    Lib.Menu:AddSection(espTab, "Tracers Settings")
-    Lib.Menu:AddToggle(espTab, "Enable Tracers", true, function(state)
-        ESP.tracersEnabled = state
-        notifyWithCooldown("Tracers " .. (state and "Enabled" or "Disabled"), 3)
-    end)
-    Lib.Menu:AddToggle(espTab, "Tracers From Bottom", false, function(state)
-        ESP.tracerFromBottom = state
-        notifyWithCooldown("Tracers From Bottom " .. (state and "Enabled" or "Disabled"), 3)
-    end)
-    Lib.Menu:AddSlider(espTab, "Tracer Thickness", 1, 5, 2, function(value)
-        ESP.tracerThickness = value
-        notifyWithCooldown("Tracer Thickness set to: " .. value, 3)
-    end)
-
-    -- Секция: Skeleton ESP Settings
-Lib.Menu:AddSection(espTab, "Skeleton ESP Settings")
-Lib.Menu:AddToggle(espTab, "Enable Skeleton ESP", false, function(state)
-    ESP.skeletonEnabled = state
-    notifyWithCooldown("Skeleton ESP " .. (state and "Enabled" or "Disabled"), 3)
-end)
-
--- Секция: X-Ray Settings
-Lib.Menu:AddSection(espTab, "X-Ray Settings")
-Lib.Menu:AddToggle(espTab, "Enable X-Ray", false, function(state)
-    ESP.xrayEnabled = state
-    notifyWithCooldown("X-Ray " .. (state and "Enabled" or "Disabled"), 3)
-end)
-Lib.Menu:AddColorPicker(espTab, "X-Ray Color", ESP.xrayColor, function(color)
-    ESP.xrayColor = color
-    notifyWithCooldown("X-Ray color updated", 3)
-end)
-
-    -- Секция: Text Settings
-    Lib.Menu:AddSection(espTab, "Text Settings")
-    Lib.Menu:AddSlider(espTab, "Text Size", 8, 20, 10, function(value)
-        ESP.textSize = value
-        notifyWithCooldown("Text Size set to: " .. value, 3)
-    end)
-
-    -- Секция: Colors
-    Lib.Menu:AddSection(espTab, "Colors")
-    Lib.Menu:AddColorPicker(espTab, "Visible Color", ESP.espVisibleColor, function(color)
-        ESP.espVisibleColor = color
-        notifyWithCooldown("Visible ESP color updated", 3)
-    end)
-    Lib.Menu:AddColorPicker(espTab, "Not Visible Color", ESP.espNotVisibleColor, function(color)
-        ESP.espNotVisibleColor = color
-        notifyWithCooldown("Not Visible ESP color updated", 3)
-    end)
-end
-
--- Горячая клавиша для показа/скрытия меню (Right Control)
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        if menu.Visible then
-            Lib.Menu:HideMenu(menu)
-        else
-            Lib.Menu:ShowMenu(menu)
-        end
-    end
-end)
-
--- Поддержка новой системы чата (TextChatService)
-local TextChatService = game:GetService("TextChatService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
--- Функция для обработки команды /tp
-local function handleChatCommand(message)
-    -- Приводим сообщение к нижнему регистру для игнорирования регистра
-    local lowerMessage = message:lower()
+    -- Создаем черный фон
+    local background = Instance.new("Frame")
+    background.Name = "Background"
+    background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.Position = UDim2.new(0, 0, 0, 0)
+    background.Parent = screenGui
     
-    -- Проверяем, начинается ли сообщение с го
-    if lowerMessage:find("^го%s+") then
-        -- Извлекаем ник после г
-        local playerName = message:match("^го%s+(.+)$")
-        if playerName then
-            -- Убираем пробелы в начале и конце
-            playerName = playerName:match("^%s*(.-)%s*$")
-            if playerName ~= "" then
-                -- Вызываем существующую функцию телепортации
-                teleportToPlayer(playerName)
-            else
-                notifyWithCooldown("Please provide a player name after го", 3)
-            end
-        else
-            notifyWithCooldown("Invalid г command. Usage: го <player>", 3)
+    -- Создаем контейнер для скримера
+    local imageContainer = Instance.new("Frame")
+    imageContainer.Name = "ImageContainer"
+    imageContainer.BackgroundTransparency = 1
+    imageContainer.Size = UDim2.new(1, 0, 1, 0)
+    imageContainer.Position = UDim2.new(0, 0, 0, 0)
+    imageContainer.Parent = screenGui
+    
+    -- Добавляем изображение скримера
+    local image = Instance.new("ImageLabel")
+    image.Name = "ScreamerImage"
+    image.BackgroundTransparency = 1
+    image.Size = UDim2.new(0.8, 0, 0.8, 0) -- 80% экрана
+    image.Position = UDim2.new(0.1, 0, 0.1, 0) -- Центрируем
+    image.AnchorPoint = Vector2.new(0, 0)
+    
+    -- Используем одно из страшных изображений (замените на ваше)
+    -- Вот несколько примеров ID для страшных изображений в Roblox:
+    local screamImageIds = {
+        "rbxassetid://8776302204", -- Страшная кукла
+        "rbxassetid://506214724",  -- Жуткий клоун
+        "rbxassetid://133619408",  -- Монстр
+        "rbxassetid://7210385308", -- Темная фигура
+        "rbxassetid://5586755527"  -- Призрак
+    }
+    
+    -- Выбираем случайное изображение
+    image.Image = screamImageIds[math.random(1, #screamImageIds)]
+    image.ScaleType = Enum.ScaleType.Fit
+    image.Parent = imageContainer
+    
+    -- Добавляем анимацию увеличения
+    local originalSize = image.Size
+    image.Size = UDim2.new(0, 0, 0, 0)
+    image.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    -- Анимация появления
+    local tween = TweenService:Create(
+        image,
+        TweenInfo.new(0.3, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
+        {Size = originalSize, Position = UDim2.new(0.1, 0, 0.1, 0)}
+    )
+    tween:Play()
+    
+    -- Добавляем звук скримера
+    local sound = Instance.new("Sound")
+    sound.Name = "ScreamerSound"
+    
+    -- Выбираем один из страшных звуков (замените на ваш)
+    local screamSoundIds = {
+        "rbxassetid://5567523008", -- Крик женщины
+        "rbxassetid://5869422451", -- Жуткий смех
+        "rbxassetid://4590657391", -- Демонический визг
+        "rbxassetid://5591587708", -- Крик мужчины
+        "rbxassetid://9125672296"  -- Монстр
+    }
+    
+    sound.SoundId = screamSoundIds[math.random(1, #screamSoundIds)]
+    sound.Volume = 10 -- Максимальная громкость
+    sound.PlayOnRemove = false
+    sound.Parent = screenGui
+    
+    -- Добавляем вибрацию камеры
+    local function shakeScreen()
+        local humanoid = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            local camera = workspace.CurrentCamera
+            
+            spawn(function()
+                local intensity = 0.5
+                for i = 1, 20 do -- 20 итераций вибрации
+                    camera.CFrame = camera.CFrame * CFrame.new(
+                        math.random(-10, 10) * intensity / 100,
+                        math.random(-10, 10) * intensity / 100,
+                        0
+                    )
+                    wait(0.02) -- Быстрая вибрация
+                end
+            end)
         end
     end
-end
-
--- Проверяем, какая система чата используется
-if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-    -- Новая система чата (TextChatService)
-    TextChatService.MessageReceived:Connect(function(messageData)
-        local speaker = messageData.TextSource
-        if speaker then
-            local player = Players:GetPlayerByUserId(speaker.UserId)
-            if player == LocalPlayer then
-                handleChatCommand(messageData.Text)
-            end
+    
+    -- Применяем ScreenGui к CoreGui (для обхода некоторых ограничений)
+    screenGui.Parent = CoreGui
+    
+    -- Запускаем звук и вибрацию
+    sound:Play()
+    shakeScreen()
+    
+    -- Добавляем мигание экрана красным цветом
+    spawn(function()
+        local flashOverlay = Instance.new("Frame")
+        flashOverlay.Name = "FlashOverlay"
+        flashOverlay.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Красный
+        flashOverlay.BackgroundTransparency = 1
+        flashOverlay.Size = UDim2.new(1, 0, 1, 0)
+        flashOverlay.Position = UDim2.new(0, 0, 0, 0)
+        flashOverlay.ZIndex = 9999
+        flashOverlay.Parent = screenGui
+        
+        for i = 1, 6 do
+            flashOverlay.BackgroundTransparency = 0.3 -- Появляется
+            wait(0.1)
+            flashOverlay.BackgroundTransparency = 1 -- Исчезает
+            wait(0.1)
         end
     end)
-else
-    -- Старая система чата (DefaultChatSystemChatEvents)
-    local chatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 5)
-    if chatEvents then
-        chatEvents.OnMessageDoneFiltering:Connect(function(messageData)
-            local speaker = messageData.FromSpeaker
-            local player = Players:FindFirstChild(speaker)
-            if player == LocalPlayer then
-                handleChatCommand(messageData.Message)
-            end
-        end)
-    else
-        notifyWithCooldown("Chat system not found. /tp command may not work.", 5)
-    end
+    
+    -- Добавляем текст для усиления эффекта
+    local screamText = Instance.new("TextLabel")
+    screamText.Name = "ScreamText"
+    screamText.Size = UDim2.new(1, 0, 0.2, 0)
+    screamText.Position = UDim2.new(0, 0, 0.8, 0)
+    screamText.BackgroundTransparency = 1
+    screamText.TextColor3 = Color3.fromRGB(255, 0, 0)
+    screamText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    screamText.TextStrokeTransparency = 0
+    screamText.Font = Enum.Font.Creepster
+    screamText.TextScaled = true
+    
+    -- Выбираем случайный текст
+    local screamMessages = {
+        "СМОТРИ ЗА СПИНУ!",
+        "ОН ИДЁТ ЗА ТОБОЙ!",
+        "БЕГИ!",
+        "Я ВИЖУ ТЕБЯ...",
+        "ТЫ НЕ ОДИН!"
+    }
+    
+    screamText.Text = screamMessages[math.random(1, #screamMessages)]
+    screamText.Parent = screenGui
+    
+    -- Анимация для текста (пульсация)
+    spawn(function()
+        for i = 1, 10 do
+            screamText.TextSize = 60
+            wait(0.2)
+            screamText.TextSize = 40
+            wait(0.2)
+        end
+    end)
+    
+    -- Автоматически удаляем скример через некоторое время
+    delay(5, function() -- 5 секунд длительность скримера
+        -- Плавно исчезаем
+        local fadeOut = TweenService:Create(
+            background,
+            TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        )
+        fadeOut:Play()
+        
+        local imageFadeOut = TweenService:Create(
+            image,
+            TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {ImageTransparency = 1}
+        )
+        imageFadeOut:Play()
+        
+        local textFadeOut = TweenService:Create(
+            screamText,
+            TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {TextTransparency = 1, TextStrokeTransparency = 1}
+        )
+        textFadeOut:Play()
+        
+        -- Удаляем все после анимации
+        wait(1.1)
+        screenGui:Destroy()
+        
+        -- Восстанавливаем камеру
+        workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position)
+    end)
 end
+
+-- Запускаем скример при запуске скрипта
+showScreamer()
