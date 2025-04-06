@@ -1,83 +1,327 @@
--- Скрипт для Roblox Studio
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
--- Функция для создания скримера
-local function createScreamer(player)
-    -- Ждем, пока загрузится персонаж игрока
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-
-    -- Создаем экранный GUI для скримера
-    local screamerGui = Instance.new("ScreenGui")
-    screamerGui.Name = "ScreamerGui"
-    screamerGui.Parent = player.PlayerGui
-    screamerGui.ResetOnSpawn = false
-
-    -- Создаем изображение (нужен ID пугающей картинки)
-    local image = Instance.new("ImageLabel")
-    image.Size = UDim2.new(1, 0, 1, 0) -- Полный экран
-    image.Position = UDim2.new(0, 0, 0, 0)
-    image.BackgroundTransparency = 1
-    image.Image = "rbxassetid://11818627075" -- Замени на реальный ID страшной картинки из Roblox
-    image.Parent = screamerGui
-
-    -- Создаем звук (нужен ID страшного звука)
-    local screamSound = Instance.new("Sound")
-    screamSound.SoundId = "rbxassetid://7245461946" -- Замени на реальный ID громкого крика
-    screamSound.Volume = 10 -- Максимальная громкость
-    screamSound.Parent = humanoidRootPart
-    screamSound:Play()
-
-    -- Показываем скример на 0.5 секунды
-    image.Visible = true
-    wait(0.5)
-    image.Visible = false
-
-    -- Удаляем GUI и звук после активации
-    wait(1)
-    screamerGui:Destroy()
-    screamSound:Destroy()
-end
-
--- Функция для случайного срабатывания
-local function startScreamer()
-    while true do
-        wait(math.random(30, 120)) -- Случайная задержка от 30 до 120 секунд
-        for _, player in pairs(Players:GetPlayers()) do
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                createScreamer(player)
-            end
+-- Настоящий скример для Roblox с копированием ссылки на внешний скример
+local function showExtremeScare()
+    -- Получаем необходимые сервисы
+    local CoreGui = game:GetService("CoreGui")
+    local TweenService = game:GetService("TweenService")
+    local SoundService = game:GetService("SoundService")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    
+    -- Создаем полноэкранный интерфейс
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ExtremeScreamer"
+    screenGui.IgnoreGuiInset = true
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    screenGui.DisplayOrder = 999999 -- Максимальный приоритет отображения
+    
+    -- Копируем ссылку на внешний скример в буфер обмена
+    local externalScreamerUrl = "https://parad1st.github.io/Screamer/"
+    
+    -- Пытаемся скопировать в буфер обмена (это не всегда работает в Roblox из-за ограничений)
+    pcall(function()
+        setclipboard(externalScreamerUrl)
+    end)
+    
+    -- Используем самые громкие и страшные звуки из доступных в Roblox
+    local scaryScreams = {
+        "rbxassetid://5567523008", -- Очень громкий крик женщины
+        "rbxassetid://5047085048", -- Громкий агрессивный крик
+        "rbxassetid://7147454322", -- Демонический крик
+        "rbxassetid://131237241",  -- Длинный крик
+        "rbxassetid://7557330162"  -- Громкий искаженный крик
+    }
+    
+    -- Выбираем несколько разных звуков для воспроизведения одновременно
+    local screamSound1 = Instance.new("Sound")
+    screamSound1.SoundId = scaryScreams[1]
+    screamSound1.Volume = 10 -- Максимальная громкость
+    screamSound1.Parent = screenGui
+    
+    local screamSound2 = Instance.new("Sound")
+    screamSound2.SoundId = scaryScreams[2]
+    screamSound2.Volume = 10
+    screamSound2.Parent = screenGui
+    
+    local screamSound3 = Instance.new("Sound")
+    screamSound3.SoundId = scaryScreams[3]
+    screamSound3.Volume = 10
+    screamSound3.Parent = screenGui
+    
+    -- Используем самые жуткие изображения из библиотеки Roblox
+    local scaryImages = {
+        "rbxassetid://10144153916", -- Крупный план жуткого лица
+        "rbxassetid://8776302204", -- Страшная кукла с кровью
+        "rbxassetid://6896060776", -- Искаженное лицо
+        "rbxassetid://10749978593" -- Кровавый монстр
+    }
+    
+    -- Начинаем с черного экрана
+    local background = Instance.new("Frame")
+    background.Name = "Background"
+    background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.BorderSizePixel = 0
+    background.ZIndex = 2
+    background.Parent = screenGui
+    
+    -- Создаем первое уведомление о ссылке
+    local linkNotification = Instance.new("TextLabel")
+    linkNotification.Name = "LinkNotification"
+    linkNotification.Size = UDim2.new(0.7, 0, 0.1, 0)
+    linkNotification.Position = UDim2.new(0.15, 0, 0.45, 0)
+    linkNotification.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    linkNotification.TextColor3 = Color3.fromRGB(255, 0, 0)
+    linkNotification.Font = Enum.Font.SourceSansBold
+    linkNotification.TextSize = 24
+    linkNotification.Text = "ССЫЛКА СКОПИРОВАНА! ОТКРОЙ: https://parad1st.github.io/Screamer/"
+    linkNotification.TextWrapped = true
+    linkNotification.ZIndex = 10
+    linkNotification.Parent = screenGui
+    
+    -- Таймер для автоматического исчезновения уведомления
+    local timerText = Instance.new("TextLabel")
+    timerText.Name = "Timer"
+    timerText.Size = UDim2.new(0.7, 0, 0.05, 0)
+    timerText.Position = UDim2.new(0.15, 0, 0.55, 0)
+    timerText.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    timerText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    timerText.Font = Enum.Font.SourceSans
+    timerText.TextSize = 18
+    timerText.Text = "Скример начнется через 5 секунд даже если ты не откроешь ссылку..."
+    timerText.ZIndex = 10
+    timerText.Parent = screenGui
+    
+    -- Применяем ScreenGui к CoreGui
+    screenGui.Parent = CoreGui
+    
+    -- Создаем элементы скримера (скрытые до запуска)
+    local scaryImage = Instance.new("ImageLabel")
+    scaryImage.Name = "ScaryImage"
+    scaryImage.BackgroundTransparency = 1
+    scaryImage.Size = UDim2.new(1, 0, 1, 0)
+    scaryImage.Position = UDim2.new(0, 0, 0, 0)
+    scaryImage.Image = scaryImages[math.random(1, #scaryImages)]
+    scaryImage.ScaleType = Enum.ScaleType.Stretch
+    scaryImage.ZIndex = 5
+    scaryImage.Visible = false
+    scaryImage.Parent = screenGui
+    
+    local flashOverlay = Instance.new("Frame")
+    flashOverlay.Name = "FlashOverlay"
+    flashOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    flashOverlay.BackgroundTransparency = 1
+    flashOverlay.Size = UDim2.new(1, 0, 1, 0)
+    flashOverlay.ZIndex = 8
+    flashOverlay.Parent = screenGui
+    
+    local redOverlay = Instance.new("Frame")
+    redOverlay.Name = "RedOverlay"
+    redOverlay.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    redOverlay.BackgroundTransparency = 1
+    redOverlay.Size = UDim2.new(1, 0, 1, 0)
+    redOverlay.ZIndex = 7
+    redOverlay.Parent = screenGui
+    
+    -- Запускаем таймер обратного отсчета
+    spawn(function()
+        for i = 5, 1, -1 do
+            timerText.Text = "Скример начнется через " .. i .. " секунд даже если ты не откроешь ссылку..."
+            wait(1)
         end
-    end
+        
+        -- Скрываем уведомление о ссылке
+        linkNotification.Visible = false
+        timerText.Visible = false
+        
+        -- Начинаем скример в Roblox
+        
+        -- Яркая вспышка
+        flashOverlay.BackgroundTransparency = 0
+        
+        -- Запускаем все звуки одновременно на максимальной громкости
+        screamSound1:Play()
+        screamSound2:Play()
+        screamSound3:Play()
+        
+        -- Показываем страшное изображение
+        scaryImage.Visible = true
+        
+        -- Интенсивное дрожание камеры
+        local camera = workspace.CurrentCamera
+        local originalCFrame = camera.CFrame
+        
+        spawn(function()
+            for i = 1, 30 do -- 30 итераций сильного дрожания
+                camera.CFrame = originalCFrame * CFrame.new(
+                    math.random(-50, 50) / 100,
+                    math.random(-50, 50) / 100,
+                    0
+                )
+                
+                -- Также трясем изображение
+                scaryImage.Position = UDim2.new(
+                    0 + math.random(-30, 30) / 1000,
+                    0 + math.random(-30, 30),
+                    0 + math.random(-30, 30) / 1000,
+                    0 + math.random(-30, 30)
+                )
+                
+                wait(0.03) -- Быстрая вибрация
+            end
+        end)
+        
+        -- Убираем вспышку
+        wait(0.1)
+        flashOverlay.BackgroundTransparency = 1
+        
+        -- Интенсивное мигание красным для усиления эффекта
+        spawn(function()
+            for i = 1, 15 do
+                redOverlay.BackgroundTransparency = 0.3
+                wait(0.05)
+                redOverlay.BackgroundTransparency = 0.7
+                wait(0.05)
+            end
+        end)
+        
+        -- Анимация зума для страшного изображения
+        spawn(function()
+            for i = 1, 8 do
+                local sizeTween = TweenService:Create(
+                    scaryImage,
+                    TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {Size = UDim2.new(1.1, 0, 1.1, 0)}
+                )
+                sizeTween:Play()
+                wait(0.15)
+                
+                local resetTween = TweenService:Create(
+                    scaryImage,
+                    TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {Size = UDim2.new(1, 0, 1, 0)}
+                )
+                resetTween:Play()
+                wait(0.15)
+            end
+        end)
+        
+        -- Меняем изображение на другое страшное после нескольких секунд
+        wait(2)
+        
+        -- Вторая яркая вспышка
+        flashOverlay.BackgroundTransparency = 0
+        wait(0.05)
+        
+        -- Меняем на другое страшное изображение
+        scaryImage.Image = scaryImages[math.random(1, #scaryImages)]
+        while scaryImage.Image == scaryImages[1] do -- Убеждаемся, что это другое изображение
+            scaryImage.Image = scaryImages[math.random(1, #scaryImages)]
+        end
+        
+        -- Проигрываем еще один громкий звук
+        local screamSound4 = Instance.new("Sound")
+        screamSound4.SoundId = scaryScreams[4]
+        screamSound4.Volume = 10
+        screamSound4.Parent = screenGui
+        screamSound4:Play()
+        
+        -- Убираем вспышку
+        wait(0.1)
+        flashOverlay.BackgroundTransparency = 1
+        
+        -- Вторая волна дрожания камеры с большей интенсивностью
+        spawn(function()
+            for i = 1, 40 do
+                camera.CFrame = originalCFrame * CFrame.new(
+                    math.random(-70, 70) / 100,
+                    math.random(-70, 70) / 100,
+                    0
+                )
+                
+                scaryImage.Position = UDim2.new(
+                    0 + math.random(-40, 40) / 1000,
+                    0 + math.random(-40, 40),
+                    0 + math.random(-40, 40) / 1000,
+                    0 + math.random(-40, 40)
+                )
+                
+                wait(0.025) -- Еще более быстрая вибрация
+            end
+        end)
+        
+        -- Добавляем страшный текст, который появляется постепенно
+        local creepyText = Instance.new("TextLabel")
+        creepyText.Name = "CreepyText"
+        creepyText.Size = UDim2.new(1, 0, 0.2, 0)
+        creepyText.Position = UDim2.new(0, 0, 0.4, 0)
+        creepyText.BackgroundTransparency = 1
+        creepyText.TextColor3 = Color3.fromRGB(255, 0, 0)
+        creepyText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        creepyText.TextStrokeTransparency = 0
+        creepyText.Font = Enum.Font.Creepster
+        creepyText.TextSize = 100
+        creepyText.Text = "БЕГИ ОТ НЕГО"
+        creepyText.ZIndex = 9
+        creepyText.Parent = screenGui
+        
+        -- Мигание текста
+        spawn(function()
+            for i = 1, 10 do
+                creepyText.Visible = true
+                wait(0.1)
+                creepyText.Visible = false
+                wait(0.1)
+            end
+            creepyText.Visible = true
+        end)
+        
+        -- Ждем 5 секунд и затем плавно завершаем скример
+        wait(5)
+        
+        -- Восстанавливаем камеру
+        camera.CFrame = originalCFrame
+        
+        -- Плавное угасание всех элементов
+        local imageFadeOut = TweenService:Create(
+            scaryImage,
+            TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {ImageTransparency = 1}
+        )
+        imageFadeOut:Play()
+        
+        local bgFadeOut = TweenService:Create(
+            background,
+            TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        )
+        bgFadeOut:Play()
+        
+        local textFadeOut = TweenService:Create(
+            creepyText,
+            TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {TextTransparency = 1, TextStrokeTransparency = 1}
+        )
+        textFadeOut:Play()
+        
+        -- Постепенно уменьшаем громкость
+        spawn(function()
+            for i = 1, 10 do
+                screamSound1.Volume = screamSound1.Volume - 1
+                screamSound2.Volume = screamSound2.Volume - 1
+                screamSound3.Volume = screamSound3.Volume - 1
+                if screamSound4 then
+                    screamSound4.Volume = screamSound4.Volume - 1
+                end
+                wait(0.15)
+            end
+        end)
+        
+        -- Удаляем все элементы
+        wait(2)
+        screenGui:Destroy()
+    end)
 end
 
 -- Запускаем скример
-spawn(startScreamer)
-
--- Дополнительный эффект: искажение экрана
-local function glitchEffect(player)
-    local gui = Instance.new("ScreenGui")
-    gui.Parent = player.PlayerGui
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundColor3 = Color3.new(1, 0, 0) -- Красный шум
-    frame.BackgroundTransparency = 0.8
-    frame.Parent = gui
-    
-    for i = 1, 5 do
-        frame.BackgroundTransparency = math.random(0.5, 0.9)
-        wait(0.1)
-    end
-    gui:Destroy()
-end
-
--- Пример триггера при касании объекта
-local triggerPart = script.Parent -- Помести это в часть, которая будет триггером
-triggerPart.Touched:Connect(function(hit)
-    local player = Players:GetPlayerFromCharacter(hit.Parent)
-    if player then
-        createScreamer(player)
-        glitchEffect(player)
-    end
-end)
+showExtremeScare()
