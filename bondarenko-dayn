@@ -1,190 +1,276 @@
--- Простой скример с красным экраном и текстом
-local function showSimpleScreamer()
-    -- Получаем сервис CoreGui
+-- Усовершенствованный скример с эффектом отрисовки и жутким звуком
+local function showCreepyScreamer()
+    -- Получаем необходимые сервисы
     local CoreGui = game:GetService("CoreGui")
     local TweenService = game:GetService("TweenService")
+    local SoundService = game:GetService("SoundService")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
     
     -- Создаем полноэкранный интерфейс
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "SimpleScreamer"
+    screenGui.Name = "CreepyScreamer"
     screenGui.IgnoreGuiInset = true
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.DisplayOrder = 999999 -- Высокий приоритет отображения
     
-    -- Создаем красный фон
+    -- Создаем черный фон (начальный)
     local background = Instance.new("Frame")
-    background.Name = "RedBackground"
-    background.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Чистый красный
+    background.Name = "Background"
+    background.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Черный фон изначально
     background.Size = UDim2.new(1, 0, 1, 0)
-    background.Position = UDim2.new(0, 0, 0, 0)
     background.BorderSizePixel = 0
     background.Parent = screenGui
     
-    -- Создаем текст
-    local screamText = Instance.new("TextLabel")
-    screamText.Name = "ScreamText"
-    screamText.Size = UDim2.new(1, 0, 1, 0)
-    screamText.Position = UDim2.new(0, 0, 0, 0)
-    screamText.BackgroundTransparency = 1
-    screamText.TextColor3 = Color3.fromRGB(255, 255, 255) -- Белый текст
-    screamText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    screamText.TextStrokeTransparency = 0
-    screamText.Font = Enum.Font.Creepster -- Жуткий шрифт
-    screamText.Text = "Я ВИЖУ ТЕБЯ"
-    screamText.TextSize = 80
-    screamText.Parent = screenGui
+    -- Создаем звук (жуткий шепот/стон)
+    local creepySound = Instance.new("Sound")
+    creepySound.Name = "CreepySound"
     
-    -- Применяем ScreenGui к CoreGui
+    -- Выбираем один из жутких звуков (ID аудио из библиотеки Roblox)
+    local scarySoundIds = {
+        "rbxassetid://9125672296",  -- Жуткий звук монстра
+        "rbxassetid://5567523008",  -- Жуткий крик
+        "rbxassetid://5869422451",  -- Жуткий смех
+        "rbxassetid://169380476",   -- Шепот
+        "rbxassetid://1843493064"   -- Зловещий стон
+    }
+    
+    -- Выбираем случайный звук из списка
+    creepySound.SoundId = scarySoundIds[math.random(1, #scarySoundIds)]
+    creepySound.Volume = 5 -- Достаточно громко
+    creepySound.Looped = true -- Повторяем для большего эффекта
+    creepySound.Parent = screenGui
+    
     screenGui.Parent = CoreGui
     
-    -- Делаем пульсацию текста для большего эффекта
+    -- Запускаем звук
+    creepySound:Play()
+    
+    -- Вызываем эффект перехода с черного экрана на красный (как будто проявляется)
+    spawn(function()
+        for i = 0, 1, 0.05 do
+            background.BackgroundColor3 = Color3.fromRGB(i * 255, 0, 0) -- Постепенное усиление красного
+            wait(0.1) -- Медленное проявление
+        end
+    end)
+    
+    -- Эффект отрисовки текста по буквам
+    wait(2) -- Ждем 2 секунды до начала появления текста
+    
+    local message = "Я ВИЖУ ТЕБЯ"
+    local finalMessage = ""
+    
+    local messageText = Instance.new("TextLabel")
+    messageText.Name = "CreepyText"
+    messageText.Size = UDim2.new(1, 0, 0.2, 0)
+    messageText.Position = UDim2.new(0, 0, 0.4, 0)
+    messageText.BackgroundTransparency = 1
+    messageText.TextColor3 = Color3.fromRGB(255, 255, 255) -- Белый текст
+    messageText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    messageText.TextStrokeTransparency = 0
+    messageText.Font = Enum.Font.Creepster
+    messageText.TextSize = 80
+    messageText.Text = ""
+    messageText.Parent = screenGui
+    
+    -- Эффект печатающегося текста
+    for i = 1, #message do
+        finalMessage = finalMessage .. string.sub(message, i, i)
+        messageText.Text = finalMessage
+        
+        -- Добавляем мерцание при печати каждой буквы
+        spawn(function()
+            local flashOverlay = Instance.new("Frame")
+            flashOverlay.Name = "FlashOverlay"
+            flashOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Белая вспышка
+            flashOverlay.BackgroundTransparency = 0.8
+            flashOverlay.Size = UDim2.new(1, 0, 1, 0)
+            flashOverlay.Position = UDim2.new(0, 0, 0, 0)
+            flashOverlay.ZIndex = 10
+            flashOverlay.Parent = screenGui
+            
+            -- Быстро скрываем вспышку
+            game:GetService("Debris"):AddItem(flashOverlay, 0.1)
+        end)
+        
+        -- Добавляем случайную паузу между буквами для более жуткого эффекта
+        wait(math.random(20, 50) / 100)
+    end
+    
+    -- Добавляем жуткие глаза, которые появляются после текста
+    wait(1)
+    
+    -- Создаем две красные точки как "глаза"
+    local leftEye = Instance.new("Frame")
+    leftEye.Name = "LeftEye"
+    leftEye.Size = UDim2.new(0.03, 0, 0.05, 0)
+    leftEye.Position = UDim2.new(0.4, 0, 0.3, 0)
+    leftEye.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    leftEye.BorderSizePixel = 0
+    leftEye.Parent = screenGui
+    
+    local rightEye = Instance.new("Frame")
+    rightEye.Name = "RightEye"
+    rightEye.Size = UDim2.new(0.03, 0, 0.05, 0)
+    rightEye.Position = UDim2.new(0.57, 0, 0.3, 0)
+    rightEye.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    rightEye.BorderSizePixel = 0
+    rightEye.Parent = screenGui
+    
+    -- Эффект мигания глаз
+    spawn(function()
+        for i = 1, 15 do -- 15 миганий
+            leftEye.Visible = false
+            rightEye.Visible = false
+            wait(math.random(5, 15) / 100) -- Случайная задержка
+            leftEye.Visible = true
+            rightEye.Visible = true
+            wait(math.random(20, 40) / 100)
+        end
+    end)
+    
+    -- Эффект движения глаз за курсором мыши
+    local mouse = Players.LocalPlayer:GetMouse()
+    local eyeTracking = RunService.RenderStepped:Connect(function()
+        local mousePos = Vector2.new(mouse.X, mouse.Y)
+        local screenSize = Vector2.new(leftEye.Parent.AbsoluteSize.X, leftEye.Parent.AbsoluteSize.Y)
+        
+        -- Ограничиваем движение глаз небольшим диапазоном
+        local centerX = 0.485 -- Центральная позиция между глазами
+        local eyeDistance = 0.085 -- Расстояние от центра до глаза
+        
+        -- Рассчитываем смещение на основе положения мыши (не более 0.04 от центра)
+        local offsetX = math.clamp((mousePos.X / screenSize.X) - 0.5, -0.04, 0.04)
+        local offsetY = math.clamp((mousePos.Y / screenSize.Y) - 0.5, -0.04, 0.04)
+        
+        -- Применяем смещение к обоим глазам
+        leftEye.Position = UDim2.new(centerX - eyeDistance + offsetX, 0, 0.3 + offsetY, 0)
+        rightEye.Position = UDim2.new(centerX + eyeDistance + offsetX, 0, 0.3 + offsetY, 0)
+    end)
+    
+    -- Добавляем пульсирующий "дыхание" тексту
     spawn(function()
         while screenGui.Parent do
-            for i = 0.8, 1.2, 0.05 do
+            for i = 0.95, 1.05, 0.005 do
                 if not screenGui.Parent then break end
-                screamText.TextSize = 80 * i
+                messageText.TextSize = 80 * i
+                messageText.Position = UDim2.new(0, 0, 0.4 - ((i - 1) * 0.5), 0)
                 wait(0.05)
             end
-            for i = 1.2, 0.8, -0.05 do
+            for i = 1.05, 0.95, -0.005 do
                 if not screenGui.Parent then break end
-                screamText.TextSize = 80 * i
+                messageText.TextSize = 80 * i
+                messageText.Position = UDim2.new(0, 0, 0.4 - ((i - 1) * 0.5), 0)
                 wait(0.05)
             end
         end
     end)
     
-    -- Автоматически удаляем скример через некоторое время (10 секунд)
-    delay(10, function()
+    -- Добавляем еще один зловещий элемент - мерцающий кровавый текст внизу
+    local extraText = Instance.new("TextLabel")
+    extraText.Name = "ExtraText"
+    extraText.Size = UDim2.new(1, 0, 0.1, 0)
+    extraText.Position = UDim2.new(0, 0, 0.7, 0)
+    extraText.BackgroundTransparency = 1
+    extraText.TextColor3 = Color3.fromRGB(255, 0, 0)
+    extraText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    extraText.TextStrokeTransparency = 0
+    extraText.Font = Enum.Font.SourceSansItalic
+    extraText.TextSize = 30
+    extraText.Text = "Ты не один..."
+    extraText.Visible = false
+    extraText.Parent = screenGui
+    
+    -- Задержка и мерцание второго текста
+    wait(3)
+    spawn(function()
+        for i = 1, 10 do
+            extraText.Visible = true
+            wait(math.random(10, 30) / 100)
+            extraText.Visible = false
+            wait(math.random(10, 50) / 100)
+        end
+        extraText.Visible = true
+    end)
+    
+    -- Добавляем эффект дрожания камеры
+    local camera = workspace.CurrentCamera
+    local originalCFrame = camera.CFrame
+    
+    spawn(function()
+        for i = 1, 50 do -- 50 итераций дрожания
+            if not screenGui.Parent then break end
+            camera.CFrame = originalCFrame * CFrame.new(
+                math.random(-10, 10) / 100,
+                math.random(-10, 10) / 100,
+                0
+            )
+            wait(0.05)
+        end
+    end)
+    
+    -- Автоматически удаляем скример через некоторое время
+    delay(15, function() -- 15 секунд показа
+        -- Отключаем слежение глаз
+        if eyeTracking then
+            eyeTracking:Disconnect()
+        end
+        
+        -- Восстанавливаем камеру
+        camera.CFrame = originalCFrame
+        
         -- Плавно исчезаем
         local fadeOut = TweenService:Create(
             background,
-            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {BackgroundTransparency = 1}
         )
         fadeOut:Play()
         
         local textFadeOut = TweenService:Create(
-            screamText,
-            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            messageText,
+            TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {TextTransparency = 1, TextStrokeTransparency = 1}
         )
         textFadeOut:Play()
+        
+        if extraText then
+            local extraFadeOut = TweenService:Create(
+                extraText,
+                TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {TextTransparency = 1, TextStrokeTransparency = 1}
+            )
+            extraFadeOut:Play()
+        end
+        
+        local eyeFadeOut = TweenService:Create(
+            leftEye,
+            TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        )
+        eyeFadeOut:Play()
+        
+        local rightEyeFadeOut = TweenService:Create(
+            rightEye,
+            TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        )
+        rightEyeFadeOut:Play()
+        
+        -- Постепенно уменьшаем громкость звука
+        spawn(function()
+            for i = creepySound.Volume, 0, -0.2 do
+                creepySound.Volume = i
+                wait(0.1)
+            end
+            creepySound:Stop()
+        end)
         
         -- Удаляем все после анимации
-        wait(2.1)
+        wait(3.1)
         screenGui:Destroy()
     end)
 end
 
--- Функция для скримера с изображением из интернета
-local function showImageScreamer(imageUrl)
-    -- Получаем сервисы
-    local CoreGui = game:GetService("CoreGui")
-    local TweenService = game:GetService("TweenService")
-    local HttpService = game:GetService("HttpService")
-    
-    -- Создаем полноэкранный интерфейс
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ImageScreamer"
-    screenGui.IgnoreGuiInset = true
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.DisplayOrder = 999999
-    
-    -- Создаем черный фон
-    local background = Instance.new("Frame")
-    background.Name = "Background"
-    background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    background.Size = UDim2.new(1, 0, 1, 0)
-    background.BorderSizePixel = 0
-    background.Parent = screenGui
-    
-    -- Создаем изображение
-    local image = Instance.new("ImageLabel")
-    image.Name = "ScaryImage"
-    image.BackgroundTransparency = 1
-    image.Size = UDim2.new(1, 0, 1, 0)
-    image.Position = UDim2.new(0, 0, 0, 0)
-    image.ScaleType = Enum.ScaleType.Stretch
-    
-    -- Используем изображение из интернета
-    if imageUrl and imageUrl ~= "" then
-        image.Image = imageUrl
-    else
-        -- Если URL не указан, показываем стандартный скример с красным экраном
-        showSimpleScreamer()
-        return
-    end
-    
-    image.Parent = screenGui
-    
-    -- Добавляем текст "Я ВИЖУ ТЕБЯ"
-    local screamText = Instance.new("TextLabel")
-    screamText.Name = "ScreamText"
-    screamText.Size = UDim2.new(1, 0, 0.2, 0)
-    screamText.Position = UDim2.new(0, 0, 0.4, 0)
-    screamText.BackgroundTransparency = 1
-    screamText.TextColor3 = Color3.fromRGB(255, 0, 0) -- Красный текст
-    screamText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    screamText.TextStrokeTransparency = 0
-    screamText.Font = Enum.Font.Creepster
-    screamText.Text = "Я ВИЖУ ТЕБЯ"
-    screamText.TextSize = 80
-    screamText.Parent = screenGui
-    
-    -- Применяем ScreenGui к CoreGui
-    screenGui.Parent = CoreGui
-    
-    -- Пульсация текста
-    spawn(function()
-        while screenGui.Parent do
-            for i = 0.8, 1.2, 0.05 do
-                if not screenGui.Parent then break end
-                screamText.TextSize = 80 * i
-                wait(0.05)
-            end
-            for i = 1.2, 0.8, -0.05 do
-                if not screenGui.Parent then break end
-                screamText.TextSize = 80 * i
-                wait(0.05)
-            end
-        end
-    end)
-    
-    -- Автоматически удаляем скример через некоторое время (10 секунд)
-    delay(10, function()
-        local fadeOut = TweenService:Create(
-            background,
-            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        )
-        fadeOut:Play()
-        
-        local imageFadeOut = TweenService:Create(
-            image,
-            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {ImageTransparency = 1}
-        )
-        imageFadeOut:Play()
-        
-        local textFadeOut = TweenService:Create(
-            screamText,
-            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {TextTransparency = 1, TextStrokeTransparency = 1}
-        )
-        textFadeOut:Play()
-        
-        wait(2.1)
-        screenGui:Destroy()
-    end)
-end
-
--- Выберите, какой тип скримера вы хотите использовать:
-
--- 1. Простой скример с красным экраном и текстом "Я ВИЖУ ТЕБЯ"
-showSimpleScreamer()
-
--- 2. Скример с изображением из интернета
--- ПРИМЕЧАНИЕ: Roblox имеет ограничения на загрузку изображений из интернета.
--- Вам нужно использовать URL изображения, размещенного на сервисах, которые разрешены Roblox.
--- Например, изображения из Asset Library Roblox в формате "rbxassetid://ID_NUMBER"
--- showImageScreamer("rbxassetid://506214724") -- Пример с жутким клоуном
+-- Запускаем скример
+showCreepyScreamer()
