@@ -1,202 +1,190 @@
--- Скрипт для запуска скримера в Roblox
-
--- Получаем необходимые сервисы
-local Players = game:GetService("Players")
-local SoundService = game:GetService("SoundService")
-local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
-
--- Функция для создания скримера
-local function showScreamer()
+-- Простой скример с красным экраном и текстом
+local function showSimpleScreamer()
+    -- Получаем сервис CoreGui
+    local CoreGui = game:GetService("CoreGui")
+    local TweenService = game:GetService("TweenService")
+    
     -- Создаем полноэкранный интерфейс
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "Screamer"
+    screenGui.Name = "SimpleScreamer"
     screenGui.IgnoreGuiInset = true
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.DisplayOrder = 999999 -- Высокий приоритет отображения
+    
+    -- Создаем красный фон
+    local background = Instance.new("Frame")
+    background.Name = "RedBackground"
+    background.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Чистый красный
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.Position = UDim2.new(0, 0, 0, 0)
+    background.BorderSizePixel = 0
+    background.Parent = screenGui
+    
+    -- Создаем текст
+    local screamText = Instance.new("TextLabel")
+    screamText.Name = "ScreamText"
+    screamText.Size = UDim2.new(1, 0, 1, 0)
+    screamText.Position = UDim2.new(0, 0, 0, 0)
+    screamText.BackgroundTransparency = 1
+    screamText.TextColor3 = Color3.fromRGB(255, 255, 255) -- Белый текст
+    screamText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    screamText.TextStrokeTransparency = 0
+    screamText.Font = Enum.Font.Creepster -- Жуткий шрифт
+    screamText.Text = "Я ВИЖУ ТЕБЯ"
+    screamText.TextSize = 80
+    screamText.Parent = screenGui
+    
+    -- Применяем ScreenGui к CoreGui
+    screenGui.Parent = CoreGui
+    
+    -- Делаем пульсацию текста для большего эффекта
+    spawn(function()
+        while screenGui.Parent do
+            for i = 0.8, 1.2, 0.05 do
+                if not screenGui.Parent then break end
+                screamText.TextSize = 80 * i
+                wait(0.05)
+            end
+            for i = 1.2, 0.8, -0.05 do
+                if not screenGui.Parent then break end
+                screamText.TextSize = 80 * i
+                wait(0.05)
+            end
+        end
+    end)
+    
+    -- Автоматически удаляем скример через некоторое время (10 секунд)
+    delay(10, function()
+        -- Плавно исчезаем
+        local fadeOut = TweenService:Create(
+            background,
+            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        )
+        fadeOut:Play()
+        
+        local textFadeOut = TweenService:Create(
+            screamText,
+            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {TextTransparency = 1, TextStrokeTransparency = 1}
+        )
+        textFadeOut:Play()
+        
+        -- Удаляем все после анимации
+        wait(2.1)
+        screenGui:Destroy()
+    end)
+end
+
+-- Функция для скримера с изображением из интернета
+local function showImageScreamer(imageUrl)
+    -- Получаем сервисы
+    local CoreGui = game:GetService("CoreGui")
+    local TweenService = game:GetService("TweenService")
+    local HttpService = game:GetService("HttpService")
+    
+    -- Создаем полноэкранный интерфейс
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ImageScreamer"
+    screenGui.IgnoreGuiInset = true
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.DisplayOrder = 999999
     
     -- Создаем черный фон
     local background = Instance.new("Frame")
     background.Name = "Background"
     background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     background.Size = UDim2.new(1, 0, 1, 0)
-    background.Position = UDim2.new(0, 0, 0, 0)
+    background.BorderSizePixel = 0
     background.Parent = screenGui
     
-    -- Создаем контейнер для скримера
-    local imageContainer = Instance.new("Frame")
-    imageContainer.Name = "ImageContainer"
-    imageContainer.BackgroundTransparency = 1
-    imageContainer.Size = UDim2.new(1, 0, 1, 0)
-    imageContainer.Position = UDim2.new(0, 0, 0, 0)
-    imageContainer.Parent = screenGui
-    
-    -- Добавляем изображение скримера
+    -- Создаем изображение
     local image = Instance.new("ImageLabel")
-    image.Name = "ScreamerImage"
+    image.Name = "ScaryImage"
     image.BackgroundTransparency = 1
-    image.Size = UDim2.new(0.8, 0, 0.8, 0) -- 80% экрана
-    image.Position = UDim2.new(0.1, 0, 0.1, 0) -- Центрируем
-    image.AnchorPoint = Vector2.new(0, 0)
+    image.Size = UDim2.new(1, 0, 1, 0)
+    image.Position = UDim2.new(0, 0, 0, 0)
+    image.ScaleType = Enum.ScaleType.Stretch
     
-    -- Используем одно из страшных изображений (замените на ваше)
-    -- Вот несколько примеров ID для страшных изображений в Roblox:
-    local screamImageIds = {
-        "rbxassetid://8776302204", -- Страшная кукла
-        "rbxassetid://506214724",  -- Жуткий клоун
-        "rbxassetid://133619408",  -- Монстр
-        "rbxassetid://7210385308", -- Темная фигура
-        "rbxassetid://5586755527"  -- Призрак
-    }
-    
-    -- Выбираем случайное изображение
-    image.Image = screamImageIds[math.random(1, #screamImageIds)]
-    image.ScaleType = Enum.ScaleType.Fit
-    image.Parent = imageContainer
-    
-    -- Добавляем анимацию увеличения
-    local originalSize = image.Size
-    image.Size = UDim2.new(0, 0, 0, 0)
-    image.Position = UDim2.new(0.5, 0, 0.5, 0)
-    
-    -- Анимация появления
-    local tween = TweenService:Create(
-        image,
-        TweenInfo.new(0.3, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
-        {Size = originalSize, Position = UDim2.new(0.1, 0, 0.1, 0)}
-    )
-    tween:Play()
-    
-    -- Добавляем звук скримера
-    local sound = Instance.new("Sound")
-    sound.Name = "ScreamerSound"
-    
-    -- Выбираем один из страшных звуков (замените на ваш)
-    local screamSoundIds = {
-        "rbxassetid://5567523008", -- Крик женщины
-        "rbxassetid://5869422451", -- Жуткий смех
-        "rbxassetid://4590657391", -- Демонический визг
-        "rbxassetid://5591587708", -- Крик мужчины
-        "rbxassetid://9125672296"  -- Монстр
-    }
-    
-    sound.SoundId = screamSoundIds[math.random(1, #screamSoundIds)]
-    sound.Volume = 10 -- Максимальная громкость
-    sound.PlayOnRemove = false
-    sound.Parent = screenGui
-    
-    -- Добавляем вибрацию камеры
-    local function shakeScreen()
-        local humanoid = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            local camera = workspace.CurrentCamera
-            
-            spawn(function()
-                local intensity = 0.5
-                for i = 1, 20 do -- 20 итераций вибрации
-                    camera.CFrame = camera.CFrame * CFrame.new(
-                        math.random(-10, 10) * intensity / 100,
-                        math.random(-10, 10) * intensity / 100,
-                        0
-                    )
-                    wait(0.02) -- Быстрая вибрация
-                end
-            end)
-        end
+    -- Используем изображение из интернета
+    if imageUrl and imageUrl ~= "" then
+        image.Image = imageUrl
+    else
+        -- Если URL не указан, показываем стандартный скример с красным экраном
+        showSimpleScreamer()
+        return
     end
     
-    -- Применяем ScreenGui к CoreGui (для обхода некоторых ограничений)
-    screenGui.Parent = CoreGui
+    image.Parent = screenGui
     
-    -- Запускаем звук и вибрацию
-    sound:Play()
-    shakeScreen()
-    
-    -- Добавляем мигание экрана красным цветом
-    spawn(function()
-        local flashOverlay = Instance.new("Frame")
-        flashOverlay.Name = "FlashOverlay"
-        flashOverlay.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Красный
-        flashOverlay.BackgroundTransparency = 1
-        flashOverlay.Size = UDim2.new(1, 0, 1, 0)
-        flashOverlay.Position = UDim2.new(0, 0, 0, 0)
-        flashOverlay.ZIndex = 9999
-        flashOverlay.Parent = screenGui
-        
-        for i = 1, 6 do
-            flashOverlay.BackgroundTransparency = 0.3 -- Появляется
-            wait(0.1)
-            flashOverlay.BackgroundTransparency = 1 -- Исчезает
-            wait(0.1)
-        end
-    end)
-    
-    -- Добавляем текст для усиления эффекта
+    -- Добавляем текст "Я ВИЖУ ТЕБЯ"
     local screamText = Instance.new("TextLabel")
     screamText.Name = "ScreamText"
     screamText.Size = UDim2.new(1, 0, 0.2, 0)
-    screamText.Position = UDim2.new(0, 0, 0.8, 0)
+    screamText.Position = UDim2.new(0, 0, 0.4, 0)
     screamText.BackgroundTransparency = 1
-    screamText.TextColor3 = Color3.fromRGB(255, 0, 0)
+    screamText.TextColor3 = Color3.fromRGB(255, 0, 0) -- Красный текст
     screamText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     screamText.TextStrokeTransparency = 0
     screamText.Font = Enum.Font.Creepster
-    screamText.TextScaled = true
-    
-    -- Выбираем случайный текст
-    local screamMessages = {
-        "СМОТРИ ЗА СПИНУ!",
-        "ОН ИДЁТ ЗА ТОБОЙ!",
-        "БЕГИ!",
-        "Я ВИЖУ ТЕБЯ...",
-        "ТЫ НЕ ОДИН!"
-    }
-    
-    screamText.Text = screamMessages[math.random(1, #screamMessages)]
+    screamText.Text = "Я ВИЖУ ТЕБЯ"
+    screamText.TextSize = 80
     screamText.Parent = screenGui
     
-    -- Анимация для текста (пульсация)
+    -- Применяем ScreenGui к CoreGui
+    screenGui.Parent = CoreGui
+    
+    -- Пульсация текста
     spawn(function()
-        for i = 1, 10 do
-            screamText.TextSize = 60
-            wait(0.2)
-            screamText.TextSize = 40
-            wait(0.2)
+        while screenGui.Parent do
+            for i = 0.8, 1.2, 0.05 do
+                if not screenGui.Parent then break end
+                screamText.TextSize = 80 * i
+                wait(0.05)
+            end
+            for i = 1.2, 0.8, -0.05 do
+                if not screenGui.Parent then break end
+                screamText.TextSize = 80 * i
+                wait(0.05)
+            end
         end
     end)
     
-    -- Автоматически удаляем скример через некоторое время
-    delay(5, function() -- 5 секунд длительность скримера
-        -- Плавно исчезаем
+    -- Автоматически удаляем скример через некоторое время (10 секунд)
+    delay(10, function()
         local fadeOut = TweenService:Create(
             background,
-            TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {BackgroundTransparency = 1}
         )
         fadeOut:Play()
         
         local imageFadeOut = TweenService:Create(
             image,
-            TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {ImageTransparency = 1}
         )
         imageFadeOut:Play()
         
         local textFadeOut = TweenService:Create(
             screamText,
-            TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {TextTransparency = 1, TextStrokeTransparency = 1}
         )
         textFadeOut:Play()
         
-        -- Удаляем все после анимации
-        wait(1.1)
+        wait(2.1)
         screenGui:Destroy()
-        
-        -- Восстанавливаем камеру
-        workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position)
     end)
 end
 
--- Запускаем скример при запуске скрипта
-showScreamer()
+-- Выберите, какой тип скримера вы хотите использовать:
+
+-- 1. Простой скример с красным экраном и текстом "Я ВИЖУ ТЕБЯ"
+showSimpleScreamer()
+
+-- 2. Скример с изображением из интернета
+-- ПРИМЕЧАНИЕ: Roblox имеет ограничения на загрузку изображений из интернета.
+-- Вам нужно использовать URL изображения, размещенного на сервисах, которые разрешены Roblox.
+-- Например, изображения из Asset Library Roblox в формате "rbxassetid://ID_NUMBER"
+-- showImageScreamer("rbxassetid://506214724") -- Пример с жутким клоуном
