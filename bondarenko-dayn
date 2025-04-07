@@ -1,407 +1,1976 @@
--- Усовершенствованный скример для Roblox с самыми жуткими звуками и эффектами
-local function createExtremeScare()
-    -- Получаем необходимые сервисы
-    local CoreGui = game:GetService("CoreGui")
-    local TweenService = game:GetService("TweenService")
-    local RunService = game:GetService("RunService")
-    local Players = game:GetService("Players")
-    local Lighting = game:GetService("Lighting")
-    local OriginalLightingProperties = {}
-    
-    -- Сохраняем оригинальные настройки освещения
-    OriginalLightingProperties.Brightness = Lighting.Brightness
-    OriginalLightingProperties.Ambient = Lighting.Ambient
-    OriginalLightingProperties.ColorShift_Top = Lighting.ColorShift_Top
-    OriginalLightingProperties.ColorShift_Bottom = Lighting.ColorShift_Bottom
-    OriginalLightingProperties.FogColor = Lighting.FogColor
-    OriginalLightingProperties.FogEnd = Lighting.FogEnd
-    OriginalLightingProperties.FogStart = Lighting.FogStart
-    
-    -- Создаем полноэкранный интерфейс
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "NightmareScreamer"
-    screenGui.IgnoreGuiInset = true
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    screenGui.DisplayOrder = 999999
-    
-    -- Подготовка к скримеру - черный экран
-    local background = Instance.new("Frame")
-    background.Name = "Background"
-    background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    background.Size = UDim2.new(1, 0, 1, 0)
-    background.BorderSizePixel = 0
-    background.ZIndex = 10
-    background.Parent = screenGui
-    
-    -- Коллекция САМЫХ страшных звуков из библиотеки Roblox
-    -- Эти ID соответствуют самым жутким звукам в библиотеке
-    local horrifyingSounds = {
-        {id = "rbxassetid://9125672296", vol = 10, pitch = 0.9},  -- Жуткий низкий демонический звук
-        {id = "rbxassetid://5567523008", vol = 10, pitch = 0.8},  -- Душераздирающий крик
-        {id = "rbxassetid://169380476", vol = 7, pitch = 0.7},    -- Жуткий шепот
-        {id = "rbxassetid://527970724", vol = 10, pitch = 1.2},   -- Скрежет/искаженный крик
-        {id = "rbxassetid://131237241", vol = 10, pitch = 0.8},   -- Долгий крик ужаса
-        {id = "rbxassetid://5047085048", vol = 10, pitch = 0.7},  -- Агрессивный рык
-        {id = "rbxassetid://5869422451", vol = 8, pitch = 0.6},   -- Демонический смех
-        {id = "rbxassetid://9114221327", vol = 10, pitch = 1.0},  -- Искаженный механический звук 
-        {id = "rbxassetid://7210535312", vol = 10, pitch = 0.9}   -- Взрыв/удар
-    }
-    
-    -- Создаем и настраиваем звуки
-    local sounds = {}
-    for i, soundInfo in ipairs(horrifyingSounds) do
-        local sound = Instance.new("Sound")
-        sound.SoundId = soundInfo.id
-        sound.Volume = 0  -- Начинаем с нулевой громкости для постепенного усиления
-        sound.PlaybackSpeed = soundInfo.pitch
-        sound.Parent = screenGui
-        sounds[i] = {instance = sound, targetVolume = soundInfo.vol}
-    end
-    
-    -- Коллекция самых жутких изображений из библиотеки Roblox
-    local horrifyingImages = {
-        "rbxassetid://10144153916", -- Жуткое искаженное лицо крупным планом
-        "rbxassetid://8776302204",  -- Страшная кукла с кровью
-        "rbxassetid://6896060776",  -- Мутированное лицо
-        "rbxassetid://10749978593", -- Кровавый монстр
-        "rbxassetid://142410803",   -- Искаженное демоническое лицо
-        "rbxassetid://11395295069", -- Жуткая маска/лицо
-        "rbxassetid://506214724"    -- Страшный клоун
-    }
-    
-    -- Создаем слои скримера
-    -- 1. Основное страшное изображение (сначала скрыто)
-    local mainScaryImage = Instance.new("ImageLabel")
-    mainScaryImage.Name = "MainScaryImage"
-    mainScaryImage.BackgroundTransparency = 1
-    mainScaryImage.Size = UDim2.new(1, 0, 1, 0)
-    mainScaryImage.Position = UDim2.new(0, 0, 0, 0)
-    mainScaryImage.Image = horrifyingImages[1]
-    mainScaryImage.ScaleType = Enum.ScaleType.Stretch
-    mainScaryImage.ZIndex = 30
-    mainScaryImage.ImageTransparency = 1  -- Начинаем с прозрачного
-    mainScaryImage.Parent = screenGui
-    
-    -- 2. Второе страшное изображение (для внезапной смены)
-    local secondScaryImage = Instance.new("ImageLabel")
-    secondScaryImage.Name = "SecondScaryImage"
-    secondScaryImage.BackgroundTransparency = 1
-    secondScaryImage.Size = UDim2.new(1, 0, 1, 0)
-    secondScaryImage.Position = UDim2.new(0, 0, 0, 0)
-    secondScaryImage.Image = horrifyingImages[2]
-    secondScaryImage.ScaleType = Enum.ScaleType.Stretch
-    secondScaryImage.ZIndex = 29
-    secondScaryImage.ImageTransparency = 1
-    secondScaryImage.Parent = screenGui
-    
-    -- 3. Вспышки и наложения
-    local whiteFlash = Instance.new("Frame")
-    whiteFlash.Name = "WhiteFlash"
-    whiteFlash.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    whiteFlash.BackgroundTransparency = 1
-    whiteFlash.Size = UDim2.new(1, 0, 1, 0)
-    whiteFlash.ZIndex = 50
-    whiteFlash.Parent = screenGui
-    
-    local redOverlay = Instance.new("Frame")
-    redOverlay.Name = "RedOverlay"
-    redOverlay.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    redOverlay.BackgroundTransparency = 1
-    redOverlay.Size = UDim2.new(1, 0, 1, 0)
-    redOverlay.ZIndex = 40
-    redOverlay.Parent = screenGui
-    
-    -- 4. Жуткие надписи
-    local creepyText = Instance.new("TextLabel")
-    creepyText.Name = "CreepyText"
-    creepyText.Size = UDim2.new(1, 0, 0.2, 0)
-    creepyText.Position = UDim2.new(0, 0, 0.4, 0)
-    creepyText.BackgroundTransparency = 1
-    creepyText.TextColor3 = Color3.fromRGB(255, 0, 0)
-    creepyText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    creepyText.TextStrokeTransparency = 0
-    creepyText.Font = Enum.Font.Creepster
-    creepyText.TextSize = 120
-    creepyText.Text = ""  -- Пока пустой, будем заполнять во время скримера
-    creepyText.ZIndex = 60
-    creepyText.TextTransparency = 1
-    creepyText.Parent = screenGui
-    
-    -- 5. Искажающие фильтры
-    local noiseTexture = Instance.new("ImageLabel")
-    noiseTexture.Name = "NoiseTexture"
-    noiseTexture.BackgroundTransparency = 1
-    noiseTexture.Size = UDim2.new(1, 0, 1, 0)
-    noiseTexture.Image = "rbxassetid://8083487310"  -- Статический шум
-    noiseTexture.ImageTransparency = 1
-    noiseTexture.ZIndex = 45
-    noiseTexture.Parent = screenGui
-    
-    -- Применяем ScreenGui
-    screenGui.Parent = CoreGui
-    
-    -- Жуткие сообщения, которые будут появляться
-    local creepyMessages = {
-        "ОН ЗА ТОБОЙ",
-        "ТЫ СЛЕДУЮЩИЙ",
-        "БЕГИ",
-        "СМОТРИ ЗА СПИНУ",
-        "ОНО УВИДЕЛО ТЕБЯ"
-    }
-    
-    -- ОСНОВНАЯ ПРОГРАММА СКРИМЕРА
-    
-    -- Начальная подготовка - затемнение экрана
-    local camera = workspace.CurrentCamera
-    local originalCFrame = camera.CFrame
-    local originalFieldOfView = camera.FieldOfView
-    
-    -- Изменяем освещение для усиления жуткого эффекта
-    spawn(function()
-        Lighting.Brightness = 0.2
-        Lighting.Ambient = Color3.fromRGB(30, 0, 0)
-        Lighting.ColorShift_Top = Color3.fromRGB(50, 0, 0)
-        Lighting.ColorShift_Bottom = Color3.fromRGB(50, 0, 0)
-        Lighting.FogColor = Color3.fromRGB(20, 0, 0)
-        Lighting.FogEnd = 200
-        Lighting.FogStart = 0
-    end)
-    
-    -- Эффект затемнения экрана с мерцаниями (начало скримера)
-    spawn(function()
-        wait(1)  -- Сначала ждем 1 секунду темноты
-        
-        -- Несколько слабых мерцаний для создания напряжения
-        for i = 1, 4 do
-            background.BackgroundTransparency = 0.8
-            wait(0.05)
-            background.BackgroundTransparency = 0
-            wait(math.random(10, 30) / 100)
-        end
-        
-        wait(0.5)  -- Пауза перед основным испугом
-        
-        -- ОСНОВНОЙ МОМЕНТ ИСПУГА
-        
-        -- 1. Белая вспышка и громкий звук
-        whiteFlash.BackgroundTransparency = 0
-        
-        -- Запускаем несколько страшных звуков с нарастающей громкостью
-        for i, sound in ipairs(sounds) do
-            sound.instance:Play()
-            spawn(function()
-                for vol = 0, sound.targetVolume, 0.5 do
-                    sound.instance.Volume = vol
-                    wait(0.01)
-                end
-            end)
-        end
-        
-        -- 2. Быстро показываем основное страшное изображение
-        mainScaryImage.Image = horrifyingImages[math.random(1, #horrifyingImages)]
-        local imageTween = TweenService:Create(
-            mainScaryImage,
-            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-            {ImageTransparency = 0}
-        )
-        imageTween:Play()
-        
-        -- 3. Убираем вспышку
-        wait(0.1)
-        whiteFlash.BackgroundTransparency = 1
-        
-        -- 4. Начинаем эффект интенсивного дрожания камеры и изображения
-        local shakeIntensity = 0.5
-        local shakeConnection = RunService.RenderStepped:Connect(function()
-            camera.CFrame = originalCFrame * CFrame.new(
-                math.random(-100, 100) / 100 * shakeIntensity,
-                math.random(-100, 100) / 100 * shakeIntensity,
-                0
-            )
-            
-            mainScaryImage.Position = UDim2.new(
-                0 + math.random(-50, 50) / 1000 * shakeIntensity,
-                0 + math.random(-50, 50) * shakeIntensity,
-                0 + math.random(-50, 50) / 1000 * shakeIntensity,
-                0 + math.random(-50, 50) * shakeIntensity
-            )
-        end)
-        
-        -- 5. Интенсивное мигание красным
-        spawn(function()
-            for i = 1, 15 do
-                redOverlay.BackgroundTransparency = 0.3
-                wait(0.05)
-                redOverlay.BackgroundTransparency = 0.7
-                wait(0.05)
-            end
-        end)
-        
-        -- 6. Постепенно включаем статический шум
-        local noiseTween = TweenService:Create(
-            noiseTexture,
-            TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {ImageTransparency = 0.7}
-        )
-        noiseTween:Play()
-        
-        -- 7. Показываем жуткий текст с эффектом печатной машинки
-        wait(0.5)
-        local selectedMessage = creepyMessages[math.random(1, #creepyMessages)]
-        creepyText.TextTransparency = 0
-        
-        -- Имитация "печатающегося" текста
-        for i = 1, #selectedMessage do
-            creepyText.Text = string.sub(selectedMessage, 1, i)
-            wait(0.05)
-        end
-        
-        -- 8. Усиливаем интенсивность тряски
-        shakeIntensity = 0.8
-        
-        -- 9. Через 2 секунды - вторая волна испуга (когда жертва думает, что уже все)
-        wait(1.5)
-        
-        -- Вторая яркая вспышка
-        whiteFlash.BackgroundTransparency = 0
-        
-        -- Меняем изображение на новое страшное
-        secondScaryImage.Image = horrifyingImages[math.random(1, #horrifyingImages)]
-        while secondScaryImage.Image == mainScaryImage.Image do
-            secondScaryImage.Image = horrifyingImages[math.random(1, #horrifyingImages)]
-        end
-        
-        mainScaryImage.ImageTransparency = 1
-        secondScaryImage.ImageTransparency = 0
-        
-        -- Добавляем новый громкий звук для второй волны
-        local jumpscareSound = Instance.new("Sound")
-        jumpscareSound.SoundId = horrifyingSounds[math.random(1, #horrifyingSounds)].id
-        jumpscareSound.Volume = 10
-        jumpscareSound.PlaybackSpeed = 0.8
-        jumpscareSound.Parent = screenGui
-        jumpscareSound:Play()
-        
-        -- Убираем вспышку
-        wait(0.1)
-        whiteFlash.BackgroundTransparency = 1
-        
-        -- Максимальная интенсивность тряски
-        shakeIntensity = 1
-        
-        -- Меняем текст на более угрожающий
-        creepyText.Text = "ТЫ УМРЕШЬ"
-        creepyText.TextSize = 140
-        
-        -- 10. Через 3 секунды - третья волна (финальная)
-        wait(1.5)
-        
-        -- Третья вспышка с искажением изображения
-        whiteFlash.BackgroundTransparency = 0
-        
-        -- Искажаем поле зрения камеры
-        camera.FieldOfView = 120
-        
-        -- Показываем самое страшное изображение
-        local finalImage = Instance.new("ImageLabel")
-        finalImage.BackgroundTransparency = 1
-        finalImage.Size = UDim2.new(2, 0, 2, 0)
-        finalImage.Position = UDim2.new(-0.5, 0, -0.5, 0)
-        finalImage.Image = horrifyingImages[3]
-        finalImage.ScaleType = Enum.ScaleType.Stretch
-        finalImage.ZIndex = 70
-        finalImage.Parent = screenGui
-        
-        -- Финальный звук
-        local finalSound = Instance.new("Sound")
-        finalSound.SoundId = "rbxassetid://9114221327"  -- Очень громкий искаженный звук
-        finalSound.Volume = 10
-        finalSound.PlaybackSpeed = 0.7
-        finalSound.Parent = screenGui
-        finalSound:Play()
-        
-        -- Мигаем всем экраном
-        whiteFlash.BackgroundTransparency = 1
-        
-        -- Максимальное искажение и дрожание
-        spawn(function()
-            for i = 1, 20 do
-                finalImage.Size = UDim2.new(2 + math.random(-20, 20) / 100, 0, 2 + math.random(-20, 20) / 100, 0)
-                finalImage.Rotation = math.random(-10, 10)
-                redOverlay.BackgroundTransparency = math.random(1, 7) / 10
-                wait(0.05)
-            end
-        end)
-        
-        -- 11. Завершение скримера через 3 секунды
-        wait(3)
-        
-        -- Отключаем тряску
-        if shakeConnection then
-            shakeConnection:Disconnect()
-        end
-        
-        -- Возвращаем камеру в нормальное состояние
-        camera.CFrame = originalCFrame
-        camera.FieldOfView = originalFieldOfView
-        
-        -- Плавно убираем все элементы
-        local fadeOut = TweenService:Create(
-            background,
-            TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        )
-        fadeOut:Play()
-        
-        local finalImageFade = TweenService:Create(
-            finalImage,
-            TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {ImageTransparency = 1}
-        )
-        finalImageFade:Play()
-        
-        local textFade = TweenService:Create(
-            creepyText,
-            TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {TextTransparency = 1}
-        )
-        textFade:Play()
-        
-        -- Уменьшаем громкость всех звуков
-        spawn(function()
-            for vol = 10, 0, -0.5 do
-                for _, sound in ipairs(sounds) do
-                    if sound.instance then
-                        sound.instance.Volume = math.max(0, sound.instance.Volume - 0.5)
-                    end
-                end
-                
-                if jumpscareSound then
-                    jumpscareSound.Volume = math.max(0, jumpscareSound.Volume - 0.5)
-                end
-                
-                if finalSound then
-                    finalSound.Volume = math.max(0, finalSound.Volume - 0.5)
-                end
-                
-                wait(0.1)
-            end
-        end)
-        
-        -- Восстанавливаем исходные настройки освещения
-        Lighting.Brightness = OriginalLightingProperties.Brightness
-        Lighting.Ambient = OriginalLightingProperties.Ambient
-        Lighting.ColorShift_Top = OriginalLightingProperties.ColorShift_Top
-        Lighting.ColorShift_Bottom = OriginalLightingProperties.ColorShift_Bottom
-        Lighting.FogColor = OriginalLightingProperties.FogColor
-        Lighting.FogEnd = OriginalLightingProperties.FogEnd
-        Lighting.FogStart = OriginalLightingProperties.FogStart
-        
-        -- Удаляем все после затухания
-        wait(3.1)
-        screenGui:Destroy()
-    end)
+--[[ ███╗   ██╗███████╗██████╗ ██╗   ██╗██╗      █████╗     ██╗     ██╗   ██╗ █████╗ ████╗  ██║██╔════╝██╔══██╗██║   ██║██║     ██╔══██╗    ██║     ██║   ██║██╔══██╗ ██╔██╗ ██║█████╗  ██████╔╝██║   ██║██║     ███████║    ██║     ██║   ██║███████║ ██║╚██╗██║██╔══╝  ██╔══██╗██║   ██║██║     ██╔══██║    ██║     ██║   ██║██╔══██║ ██║ ╚████║███████╗██████╔╝╚██████╔╝███████╗██║  ██║    ███████╗╚██████╔╝██║  ██║ ╚═╝  ╚═══╝╚══════╝╚═════╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝    ╚══════╝ ╚═════╝ ╚═╝  ╚═╝
+
+-- [ Nebula
+
+-- Advanced anti
+
+-- aim script v2.5 ]
+
+Features:
+- State-based anti-aim system
+- Advanced defensive anti-aim settings
+- Automatic discharge exploit
+- Full configuration system
+- Enhanced visuals & animations
+- Manual AA direction control
+- Custom hotbar for active features
+- Sleek visualization design
+- RGB menu enhancements
+- Informative main tab ]]
+
+-- [ Required libs ]
+
+local ffi = require("ffi")
+local pui = require("gamesense/pui")
+local base64 = require("gamesense/base64")
+local vector = require("vector")
+
+-- [ Anti-aim references ]
+local ref = {
+    aa_enable = ui.reference("AA", "Anti-aimbot angles", "Enabled"),
+    pitch = ui.reference("AA", "Anti-aimbot angles", "Pitch"),
+    pitch_value = select(2, ui.reference("AA", "Anti-aimbot angles", "Pitch")),
+    yaw_base = ui.reference("AA", "Anti-aimbot angles", "Yaw base"),
+    yaw = ui.reference("AA", "Anti-aimbot angles", "Yaw"),
+    yaw_value = select(2, ui.reference("AA", "Anti-aimbot angles", "Yaw")),
+    yaw_jitter = ui.reference("AA", "Anti-aimbot angles", "Yaw Jitter"),
+    yaw_jitter_value = select(2, ui.reference("AA", "Anti-aimbot angles", "Yaw Jitter")),
+    body_yaw = ui.reference("AA", "Anti-aimbot angles", "Body yaw"),
+    body_yaw_value = select(2, ui.reference("AA", "Anti-aimbot angles", "Body yaw")),
+    freestand_body_yaw = ui.reference("AA", "Anti-aimbot angles", "Freestanding body yaw"),
+    edgeyaw = ui.reference("AA", "Anti-aimbot angles", "Edge yaw"),
+    freestand = {ui.reference("AA", "Anti-aimbot angles", "Freestanding")},
+    roll = ui.reference("AA", "Anti-aimbot angles", "Roll"),
+    slide = {ui.reference("AA", "Other", "Slow motion")},
+    fakeduck = ui.reference("RAGE", "Other", "Duck peek assist"),
+    quick_peek = {ui.reference("RAGE", "Other", "Quick peek assist")},
+    doubletap = {ui.reference("RAGE", "Aimbot", "Double tap")},
+}
+
+-- [ Utility functions ]
+function get_velocity()
+    if not entity.get_local_player() then return 0 end
+    local first_velocity, second_velocity = entity.get_prop(entity.get_local_player(), "m_vecVelocity")
+    local speed = math.floor(math.sqrt(first_velocity*first_velocity+second_velocity*second_velocity))
+    return speed
 end
 
--- Запускаем улучшенный скример
-createExtremeScare()
+local ground_tick = 1
+function get_state(speed)
+    if not entity.is_alive(entity.get_local_player()) then return 1 end
+    local flags = entity.get_prop(entity.get_local_player(), "m_fFlags")
+    local land = bit.band(flags, bit.lshift(1, 0)) ~= 0
+
+    if land == true then
+        ground_tick = ground_tick + 1
+    else
+        ground_tick = 0
+    end
+
+    if bit.band(flags, 1) == 1 then
+        if ground_tick < 10 then
+            if bit.band(flags, 4) == 4 then
+                return 5
+            else
+                return 4
+            end
+        end
+
+        if bit.band(flags, 4) == 4 or ui.get(ref.fakeduck) then
+            return 6 -- crouching
+        else
+            if speed <= 3 then
+                return 2 -- standing
+            else
+                if ui.get(ref.slide[2]) then
+                    return 7 -- slowwalk
+                else
+                    return 3 -- moving
+                end
+            end
+        end
+    elseif bit.band(flags, 1) == 0 then
+        if bit.band(flags, 4) == 4 then
+            return 5 -- air-c
+        else
+            return 4 -- air
+        end
+    end
+    return 1
+end
+
+-- [ Версия и информация о скрипте ]
+local script_info = {
+    version = "2.5",
+    author = "KultRecode",
+    latest_update = "05.04.2025",
+    changelog = {
+        "- Добавлена вкладка Main с полезной информацией",
+        "- Улучшен дизайн ватермарка с RGB эффектами",
+        "- Исправлены ошибки с nil значениями",
+        "- Улучшена производительность индикаторов",
+        "- Добавлены настройки RGB для интерфейса",
+        "- Оптимизирована логика анти-аима"
+    }
+}
+
+--[ Clipboard functionality ]
+
+ffi.cdef [[
+    typedef int(__thiscall* get_clipboard_text_count)(void*);
+    typedef void(__thiscall* set_clipboard_text)(void*, const char*, int);
+    typedef void(__thiscall* get_clipboard_text)(void*, int, const char*, int);
+]]
+
+local VGUI_System010 = client.create_interface("vgui2.dll", "VGUI_System010") or print("Error finding VGUI_System010")
+local VGUI_System = ffi.cast(ffi.typeof('void***'), VGUI_System010)
+local get_clipboard_text_count = ffi.cast("get_clipboard_text_count", VGUI_System[0][7]) or print("get_clipboard_text_count Invalid")
+local set_clipboard_text = ffi.cast("set_clipboard_text", VGUI_System[0][9]) or print("set_clipboard_text Invalid")
+local get_clipboard_text = ffi.cast("get_clipboard_text", VGUI_System[0][11]) or print("get_clipboard_text Invalid")
+
+clipboard_import = function()
+    local clipboard_text_length = get_clipboard_text_count(VGUI_System)
+    if clipboard_text_length > 0 then
+        local buffer = ffi.new("char[?]", clipboard_text_length)
+        local size = clipboard_text_length * ffi.sizeof("char[?]", clipboard_text_length)
+        get_clipboard_text(VGUI_System, 0, buffer, size)
+        return ffi.string(buffer, clipboard_text_length-1)
+    end
+    return ""
+end
+
+local function clipboard_export(string)
+    if string then
+        set_clipboard_text(VGUI_System, string, string:len())
+    end
+end
+
+-- [ Anti-aim state names ]
+local aa_state = {[1] = "G", [2] = "S", [3] = "M", [4] = "A", [5] = "A-C", [6] = "C", [7] = "SW"}
+local aa_state_full = {[1] = "Global", [2] = "Stand", [3] = "Move", [4] = "Air", [5] = "Air (crouch)", [6] = "Crouch", [7] = "Slowwalk"}
+
+-- [ Defensive anti-aim detection ]
+local last_sim_time = 0
+local defensive_until = 0
+local function is_defensive_active()
+    local tickcount = globals.tickcount()
+    local sim_time = toticks(entity.get_prop(entity.get_local_player(), "m_flSimulationTime"))
+    local sim_diff = sim_time - last_sim_time
+
+    if sim_diff < 0 then
+        defensive_until = tickcount + math.abs(sim_diff) - toticks(client.latency())
+    end
+
+    last_sim_time = sim_time
+    return defensive_until > tickcount
+end
+
+local function is_vulnerable()
+    for _, v in ipairs(entity.get_players(true)) do
+        local flags = (entity.get_esp_data(v)).flags
+        if bit.band(flags, bit.lshift(1, 11)) ~= 0 then
+            return true
+        end
+    end
+    return false
+end
+
+-- [ Helper functions ]
+contains = function(tbl, arg)
+    if tbl == nil then return false end
+    for index, value in next, tbl do
+        if value == arg then
+            return true
+        end
+    end
+    return false
+end
+
+-- Easing functions
+local easing = {
+    -- t: current time, b: beginning value, c: change in value, d: duration
+    linear = function(t, b, c, d) return c * t / d + b end,
+    inQuad = function(t, b, c, d) t = t / d; return c * t * t + b end,
+    outQuad = function(t, b, c, d) t = t / d; return -c * t * (t - 2) + b end,
+    inOutQuad = function(t, b, c, d) t = t / d * 2 if t < 1 then return c / 2 * t * t + b end t = t - 1 return -c / 2 * (t * (t - 2) - 1) + b end,
+    outCubic = function(t, b, c, d) t = t / d - 1; return c * (t * t * t + 1) + b end,
+    inCubic = function(t, b, c, d) t = t / d; return c * t * t * t + b end,
+    inOutCubic = function(t, b, c, d) t = t / d * 2 if t < 1 then return c / 2 * t * t * t + b end t = t - 2 return c / 2 * (t * t * t + 2) + b end
+}
+
+-- Convert ticks to time function
+function toticks(t)
+    return math.floor(0.5 + (t / globals.tickinterval()))
+end
+
+-- [ RGB Helper functions ]
+local function get_rgb(speed, offset)
+    offset = offset or 0
+    local speed = speed or 2.0  -- Значение по умолчанию
+
+    -- Защита от nil
+    if speed == nil or offset == nil then
+        return 85, 165, 245  -- Возвращаем стандартные цвета в случае ошибки
+    end
+
+    local r = math.floor(math.sin(globals.realtime() * speed + offset) * 127 + 128)
+    local g = math.floor(math.sin(globals.realtime() * speed + offset + 2) * 127 + 128)
+    local b = math.floor(math.sin(globals.realtime() * speed + offset + 4) * 127 + 128)
+    return r, g, b
+end
+
+-- [ UI theme customization ]
+pui.accent = "55A5F5FF" -- Nebula blue accent
+
+-- [ UI Creation ]
+local group = pui.group("AA", "Anti-aimbot angles")
+local _ui = {
+    lua = {
+        enable = group:checkbox("\vNebula LUA"),
+        tab = group:combobox("\n ", "Main", "Anti-aim", "Visuals", "Miscellaneous"),
+    },
+
+    main = {
+        info_label = group:label("Nebula Anti-Aim Script v" .. script_info.version),
+        author_label = group:label("Author: " .. script_info.author),
+        update_label = group:label("Last updated: " .. script_info.latest_update),
+        changelog_header = group:label("Latest changes:"),
+        -- Добавляем элементы changelog из массива
+        changelog_items = {},
+        current_state = group:label("Current state: -"),
+        dt_state = group:label("Double-tap: -"),
+        hs_state = group:label("On-shot: -"),
+        defense_state = group:label("Defensive AA: -"),
+        discord_btn = group:button("Join Discord", function()
+            clipboard_export("https://discord.com/invite/nebula")
+            client.color_log(85, 165, 245, "[NEBULA] ", 255, 255, 255, "Discord link copied to clipboard!")
+        end),
+        telegram_btn = group:button("Join Telegram", function()
+            clipboard_export("https://t.me/nebulaantiaim")
+            client.color_log(85, 165, 245, "[NEBULA] ", 255, 255, 255, "Telegram link copied to clipboard!")
+        end),
+    },
+
+    antiaim = {
+        enable = group:checkbox("Enable Nebula Anti-aim"),
+        tab = group:combobox("\aFFFFFFFFAnti-aim tab", "Builder", "Settings"),
+        condition = group:combobox("Player state", aa_state_full),
+        tweaks = group:multiselect("Tweaks", "Anti-backstab", "Safe head", "Anti-resolver"),
+        freestanding = group:hotkey("Freestanding"),
+        edge_yaw = group:hotkey("Edge yaw"),
+        manual_left = group:hotkey("Manual left"),
+        manual_right = group:hotkey("Manual right"),
+        manual_back = group:hotkey("Manual back"),
+        cfg_export = group:button("Export anti-aim settings", function() config.export() end),
+        cfg_import = group:button("Import anti-aim settings", function() config.import() end),
+        cfg_reset = group:button("\aFF8282FFReset anti-aim settings", function() config.import("W3siZW5hYmxlIjp0cnVlLCJ0YWIiOiJTZXR0aW5ncyIsImZyZWVzdGFuZGluZyI6WzEsMCwifiJdLCJjb25kaXRpb24iOiJHbG9iYWwiLCJlZGdlX3lhdyI6WzEsMCwifiJdLCJ0d2Vha3MiOlsifiJdfSxbeyJ5YXdfYmFzZSI6IkxvY2FsIHZpZXciLCJwaXRjaCI6Ik9mZiIsImJvZHlfeWF3IjoiT2ZmIiwieWF3IjoiT2ZmIiwiZnJlZXN0YW5kX2JvZHlfeWF3IjpmYWxzZSwiYm9keV95YXdfdmFsdWUiOjAsInlhd19qaXR0ZXIiOiJPZmYiLCJ5YXdfdmFsdWUiOjAsIm92ZXJyaWRlIjp0cnVlLCJ5YXdfaml0dGVyX3ZhbHVlIjowfSx7Inlhd19iYXNlIjoiTG9jYWwgdmlldyIsInBpdGNoIjoiT2ZmIiwiYm9keV95YXciOiJPZmYiLCJ5YXciOiJPZmYiLCJmcmVlc3RhbmRfYm9keV95YXciOmZhbHNlLCJib2R5X3lhd192YWx1ZSI6MCwieWF3X2ppdHRlciI6Ik9mZiIsInlhd192YWx1ZSI6MCwib3ZlcnJpZGUiOmZhbHNlLCJ5YXdfaml0dGVyX3ZhbHVlIjowfSx7Inlhd19iYXNlIjoiTG9jYWwgdmlldyIsInBpdGNoIjoiT2ZmIiwiYm9keV95YXciOiJPZmYiLCJ5YXciOiJPZmYiLCJmcmVlc3RhbmRfYm9keV95YXciOmZhbHNlLCJib2R5X3lhd192YWx1ZSI6MCwieWF3X2ppdHRlciI6Ik9mZiIsInlhd192YWx1ZSI6MCwib3ZlcnJpZGUiOmZhbHNlLCJ5YXdfaml0dGVyX3ZhbHVlIjowfSx7Inlhd19iYXNlIjoiTG9jYWwgdmlldyIsInBpdGNoIjoiT2ZmIiwiYm9keV95YXciOiJPZmYiLCJ5YXciOiJPZmYiLCJmcmVlc3RhbmRfYm9keV95YXciOmZhbHNlLCJib2R5X3lhd192YWx1ZSI6MCwieWF3X2ppdHRlciI6Ik9mZiIsInlhd192YWx1ZSI6MCwib3ZlcnJpZGUiOmZhbHNlLCJ5YXdfaml0dGVyX3ZhbHVlIjowfSx7Inlhd19iYXNlIjoiTG9jYWwgdmlldyIsInBpdGNoIjoiT2ZmIiwiYm9keV95YXciOiJPZmYiLCJ5YXciOiJPZmYiLCJmcmVlc3RhbmRfYm9keV95YXciOmZhbHNlLCJib2R5X3lhd192YWx1ZSI6MCwieWF3X2ppdHRlciI6Ik9mZiIsInlhd192YWx1ZSI6MCwib3ZlcnJpZGUiOmZhbHNlLCJ5YXdfaml0dGVyX3ZhbHVlIjowfSx7Inlhd19iYXNlIjoiTG9jYWwgdmlldyIsInBpdGNoIjoiT2ZmIiwiYm9keV95YXciOiJPZmYiLCJ5YXciOiJPZmYiLCJmcmVlc3RhbmRfYm9keV95YXciOmZhbHNlLCJib2R5X3lhd192YWx1ZSI6MCwieWF3X2ppdHRlciI6Ik9mZiIsInlhd192YWx1ZSI6MCwib3ZlcnJpZGUiOmZhbHNlLCJ5YXdfaml0dGVyX3ZhbHVlIjowfSx7Inlhd19iYXNlIjoiTG9jYWwgdmlldyIsInBpdGNoIjoiT2ZmIiwiYm9keV95YXciOiJPZmYiLCJ5YXciOiJPZmYiLCJmcmVlc3RhbmRfYm9keV95YXciOmZhbHNlLCJib2R5X3lhd192YWx1ZSI6MCwieWF3X2ppdHRlciI6Ik9mZiIsInlhd192YWx1ZSI6MCwib3ZlcnJpZGUiOmZhbHNlLCJ5YXdfaml0dGVyX3ZhbHVlIjowfV0sW3siZGVmZW5zaXZlX21vZGlmaWVycyI6ZmFsc2UsInlhd19iYXNlIjoiTG9jYWwgdmlldyIsInBpdGNoIjoiT2ZmIiwiZGVmZW5zaXZlX2FhX2VuYWJsZSI6ZmFsc2UsImJvZHlfeWF3IjoiT2ZmIiwieWF3IjoiT2ZmIiwieWF3X3ZhbHVlIjowLCJ5YXdfaml0dGVyX3ZhbHVlIjowLCJ5YXdfaml0dGVyIjoiT2ZmIiwiYm9keV95YXdfdmFsdWUiOjAsInBpdGNoX3ZhbHVlIjowLCJmb3JjZV9kZWZlbnNpdmUiOmZhbHNlfSx7ImRlZmVuc2l2ZV9tb2RpZmllcnMiOmZhbHNlLCJ5YXdfYmFzZSI6IkxvY2FsIHZpZXciLCJwaXRjaCI6Ik9mZiIsImRlZmVuc2l2ZV9hYV9lbmFibGUiOmZhbHNlLCJib2R5X3lhdyI6Ik9mZiIsInlhdyI6Ik9mZiIsInlhd192YWx1ZSI6MCwieWF3X2ppdHRlcl92YWx1ZSI6MCwieWF3X2ppdHRlciI6Ik9mZiIsImJvZHlfeWF3X3ZhbHVlIjowLCJwaXRjaF92YWx1ZSI6MCwiZm9yY2VfZGVmZW5zaXZlIjpmYWxzZX0seyJkZWZlbnNpdmVfbW9kaWZpZXJzIjpmYWxzZSwieWF3X2Jhc2UiOiJMb2NhbCB2aWV3IiwicGl0Y2giOiJPZmYiLCJkZWZlbnNpdmVfYWFfZW5hYmxlIjpmYWxzZSwiYm9keV95YXciOiJPZmYiLCJ5YXciOiJPZmYiLCJ5YXdfdmFsdWUiOjAsInlhd19qaXR0ZXJfdmFsdWUiOjAsInlhd19qaXR0ZXIiOiJPZmYiLCJib2R5X3lhd192YWx1ZSI6MCwicGl0Y2hfdmFsdWUiOjAsImZvcmNlX2RlZmVuc2l2ZSI6ZmFsc2V9LHsiZGVmZW5zaXZlX21vZGlmaWVycyI6ZmFsc2UsInlhd19iYXNlIjoiTG9jYWwgdmlldyIsInBpdGNoIjoiT2ZmIiwiZGVmZW5zaXZlX2FhX2VuYWJsZSI6ZmFsc2UsImJvZHlfeWF3IjoiT2ZmIiwieWF3IjoiT2ZmIiwieWF3X3ZhbHVlIjowLCJ5YXdfaml0dGVyX3ZhbHVlIjowLCJ5YXdfaml0dGVyIjoiT2ZmIiwiYm9keV95YXdfdmFsdWUiOjAsInBpdGNoX3ZhbHVlIjowLCJmb3JjZV9kZWZlbnNpdmUiOmZhbHNlfSx7ImRlZmVuc2l2ZV9tb2RpZmllcnMiOmZhbHNlLCJ5YXdfYmFzZSI6IkxvY2FsIHZpZXciLCJwaXRjaCI6Ik9mZiIsImRlZmVuc2l2ZV9hYV9lbmFibGUiOmZhbHNlLCJib2R5X3lhdyI6Ik9mZiIsInlhdyI6Ik9mZiIsInlhd192YWx1ZSI6MCwieWF3X2ppdHRlcl92YWx1ZSI6MCwieWF3X2ppdHRlciI6Ik9mZiIsImJvZHlfeWF3X3ZhbHVlIjowLCJwaXRjaF92YWx1ZSI6MCwiZm9yY2VfZGVmZW5zaXZlIjpmYWxzZX0seyJkZWZlbnNpdmVfbW9kaWZpZXJzIjpmYWxzZSwieWF3X2Jhc2UiOiJMb2NhbCB2aWV3IiwicGl0Y2giOiJPZmYiLCJkZWZlbnNpdmVfYWFfZW5hYmxlIjpmYWxzZSwiYm9keV95YXciOiJPZmYiLCJ5YXciOiJPZmYiLCJ5YXdfdmFsdWUiOjAsInlhd19qaXR0ZXJfdmFsdWUiOjAsInlhd19qaXR0ZXIiOiJPZmYiLCJib2R5X3lhd192YWx1ZSI6MCwicGl0Y2hfdmFsdWUiOjAsImZvcmNlX2RlZmVuc2l2ZSI6ZmFsc2V9LHsiZGVmZW5zaXZlX21vZGlmaWVycyI6ZmFsc2UsInlhd19iYXNlIjoiTG9jYWwgdmlldyIsInBpdGNoIjoiT2ZmIiwiZGVmZW5zaXZlX2FhX2VuYWJsZSI6ZmFsc2UsImJvZHlfeWF3IjoiT2ZmIiwieWF3IjoiT2ZmIiwieWF3X3ZhbHVlIjowLCJ5YXdfaml0dGVyX3ZhbHVlIjowLCJ5YXdfaml0dGVyIjoiT2ZmIiwiYm9keV95YXdfdmFsdWUiOjAsInBpdGNoX3ZhbHVlIjowLCJmb3JjZV9kZWZlbnNpdmUiOmZhbHNlfV1d") end),
+        cfg_default = group:button("\vLoad Nebula default settings", function() config.import("W3siZW5hYmxlIjp0cnVlLCJ0YWIiOiJTZXR0aW5ncyIsImZyZWVzdGFuZGluZyI6WzEsNCwifiJdLCJjb25kaXRpb24iOiJTbG93d2FsayIsImVkZ2VfeWF3IjpbMSw0LCJ+Il0sInR3ZWFrcyI6WyJBbnRpLWJhY2tzdGFiIiwiU2FmZSBoZWFkIiwiQW50aS1yZXNvbHZlciIsIn4iXX0sW3sieWF3X2Jhc2UiOiJMb2NhbCB2aWV3IiwicGl0Y2giOiJPZmYiLCJib2R5X3lhdyI6Ik9mZiIsInlhdyI6Ik9mZiIsImZyZWVzdGFuZF9ib2R5X3lhdyI6ZmFsc2UsImJvZHlfeWF3X3ZhbHVlIjowLCJ5YXdfaml0dGVyIjoiT2ZmIiwieWF3X3ZhbHVlIjowLCJvdmVycmlkZSI6dHJ1ZSwieWF3X2ppdHRlcl92YWx1ZSF5aml0dGVyX3ZhbHVlIjowfSx7Inlhd19iYXNlIjoiQXQgdGFyZ2V0cyIsInBpdGNoIjoiRG93biIsImJvZHlfeWF3IjoiSml0dGVyIiwieWF3IjoiMTgwIiwiZnJlZXN0YW5kX2JvZHlfeWF3IjpmYWxzZSwiYm9keV95YXdfdmFsdWUiOjAsInlhd19qaXR0ZXIiOiJDZW50ZXIiLCJ5YXdfdmFsdWUiOjgsIm92ZXJyaWRlIjp0cnVlLCJ5YXdfaml0dGVyX3ZhbHVlIjotMTR9LHsieWF3X2Jhc2UiOiJBdCB0YXJnZXRzIiwicGl0Y2giOiJEb3duIiwiYm9keV95YXciOiJKaXR0ZXIiLCJ5YXciOiIxODAiLCJmcmVlc3RhbmRfYm9keV95YXciOmZhbHNlLCJib2R5X3lhd192YWx1ZSI6LTczLCJ5YXdfaml0dGVyIjoiQ2VudGVyIiwieWF3X3ZhbHVlIjozLCJvdmVycmlkZSI6dHJ1ZSwieWF3X2ppdHRlcl92YWx1ZSI6NjZ9LHsieWF3X2Jhc2UiOiJBdCB0YXJnZXRzIiwicGl0Y2giOiJEb3duIiwiYm9keV95YXciOiJKaXR0ZXIiLCJ5YXciOiIxODAiLCJmcmVlc3RhbmRfYm9keV95YXciOmZhbHNlLCJib2R5X3lhd192YWx1ZSI6MSwieWF3X2ppdHRlciI6IkNlbnRlciIsInlhd192YWx1ZSI6MCwib3ZlcnJpZGUiOnRydWUsInlhd19qaXR0ZXJfdmFsdWUiOjI4fSx7Inlhd19iYXNlIjoiQXQgdGFyZ2V0cyIsInBpdGNoIjoiRG93biIsImJvZHlfeWF3IjoiSml0dGVyIiwieWF3IjoiMTgwIiwiZnJlZXN0YW5kX2JvZHlfeWF3IjpmYWxzZSwiYm9keV95YXdfdmFsdWUiOjAsInlhd19qaXR0ZXIiOiJDZW50ZXIiLCJ5YXdfdmFsdWUiOjEyLCJvdmVycmlkZSI6dHJ1ZSwieWF3X2ppdHRlcl92YWx1ZSI6NjN9LHsieWF3X2Jhc2UiOiJBdCB0YXJnZXRzIiwicGl0Y2giOiJEb3duIiwiYm9keV95YXciOiJKaXR0ZXIiLCJ5YXciOiIxODAiLCJmcmVlc3RhbmRfYm9keV95YXciOmZhbHNlLCJib2R5X3lhd192YWx1ZSI6MCwieWF3X2ppdHRlciI6IkNlbnRlciIsInlhd192YWx1ZSI6MCwib3ZlcnJpZGUiOnRydWUsInlhd19qaXR0ZXJfdmFsdWUiOjI4fSx7Inlhd19iYXNlIjoiQXQgdGFyZ2V0cyIsInBpdGNoIjoiRG93biIsImJvZHlfeWF3IjoiSml0dGVyIiwieWF3IjoiMTgwIiwiZnJlZXN0YW5kX2JvZHlfeWF3IjpmYWxzZSwiYm9keV95YXdfdmFsdWUiOjAsInlhd19qaXR0ZXIiOiJTa2l0dGVyIiwieWF3X3ZhbHVlIjo4LCJvdmVycmlkZSI6dHJ1ZSwieWF3X2ppdHRlcl92YWx1ZSI6LTE2fV0sW3siZGVmZW5zaXZlX21vZGlmaWVycyI6dHJ1ZSwieWF3X2Jhc2UiOiJMb2NhbCB2aWV3IiwicGl0Y2giOiJPZmYiLCJkZWZlbnNpdmVfYWFfZW5hYmxlIjpmYWxzZSwiYm9keV95YXciOiJPZmYiLCJ5YXciOiJPZmYiLCJ5YXdfdmFsdWUiOjAsInlhd19qaXR0ZXJfdmFsdWUiOjAsInlhd19qaXR0ZXIiOiJPZmYiLCJib2R5X3lhd192YWx1ZSI6MCwicGl0Y2hfdmFsdWUiOjAsImZvcmNlX2RlZmVuc2l2ZSI6ZmFsc2V9LHsiZGVmZW5zaXZlX21vZGlmaWVycyI6dHJ1ZSwieWF3X2Jhc2UiOiJBdCB0YXJnZXRzIiwicGl0Y2giOiJEb3duIiwiZGVmZW5zaXZlX2FhX2VuYWJsZSI6dHJ1ZSwiYm9keV95YXciOiJPcHBvc2l0ZSIsInlhdyI6IjE4MCIsInlhd192YWx1ZSI6LTEyNiwieWF3X2ppdHRlcl92YWx1ZSI6ODIsInlhd19qaXR0ZXIiOiJDZW50ZXIiLCJib2R5X3lhd192YWx1ZSI6LTMwLCJwaXRjaF92YWx1ZSI6MCwiZm9yY2VfZGVmZW5zaXZlIjp0cnVlfSx7ImRlZmVuc2l2ZV9tb2RpZmllcnMiOnRydWUsInlhd19iYXNlIjoiQXQgdGFyZ2V0cyIsInBpdGNoIjoiRG93biIsImRlZmVuc2l2ZV9hYV9lbmFibGUiOnRydWUsImJvZHlfeWF3IjoiT2ZmIiwieWF3IjoiU3BpbiIsInlhd192YWx1ZSI6NTcsInlhd19qaXR0ZXJfdmFsdWUiOjE4MCwieWF3X2ppdHRlciI6IlNraXR0ZXIiLCJib2R5X3lhd192YWx1ZSI6MCwicGl0Y2hfdmFsdWUiOjg5LCJmb3JjZV9kZWZlbnNpdmUiOnRydWV9LHsiZGVmZW5zaXZlX21vZGlmaWVycyI6dHJ1ZSwieWF3X2Jhc2UiOiJBdCB0YXJnZXRzIiwicGl0Y2giOiJDdXN0b20iLCJkZWZlbnNpdmVfYWFfZW5hYmxlIjp0cnVlLCJib2R5X3lhdyI6Ik9mZiIsInlhdyI6IlNwaW4iLCJ5YXdfdmFsdWUiOjM5LCJ5YXdfaml0dGVyX3ZhbHVlIjoxODAsInlhd19qaXR0ZXIiOiJTa2l0dGVyIiwiYm9keV95YXdfdmFsdWUiOjAsInBpdGNoX3ZhbHVlIjo2MCwiZm9yY2VfZGVmZW5zaXZlIjp0cnVlfSx7ImRlZmVuc2l2ZV9tb2RpZmllcnMiOnRydWUsInlhd19iYXNlIjoiQXQgdGFyZ2V0cyIsInBpdGNoIjoiQ3VzdG9tIiwiZGVmZW5zaXZlX2FhX2VuYWJsZSI6dHJ1ZSwiYm9keV95YXciOiJKaXR0ZXIiLCJ5YXciOiJTcGluIiwieWF3X3ZhbHVlIjotMTU0LCJ5YXdfaml0dGVyX3ZhbHVlIjotOTEsInlhd19qaXR0ZXIiOiJPZmYiLCJib2R5X3lhd192YWx1ZSI6MCwicGl0Y2hfdmFsdWUiOi03OCwiZm9yY2VfZGVmZW5zaXZlIjp0cnVlfSx7ImRlZmVuc2l2ZV9tb2RpZmllcnMiOnRydWUsInlhd19iYXNlIjoiQXQgdGFyZ2V0cyIsInBpdGNoIjoiVXAiLCJkZWZlbnNpdmVfYWFfZW5hYmxlIjp0cnVlLCJib2R5X3lhdyI6Ik9mZiIsInlhdyI6IjE4MCIsInlhd192YWx1ZSI6LTE2MiwieWF3X2ppdHRlcl92YWx1ZSI6NDMsInlhd19qaXR0ZXIiOiJTa2l0dGVyIiwiYm9keV95YXdfdmFsdWUiOjAsInBpdGNoX3ZhbHVlIjowLCJmb3JjZV9kZWZlbnNpdmUiOnRydWV9LHsiZGVmZW5zaXZlX21vZGlmaWVycyI6dHJ1ZSwieWF3X2Jhc2UiOiJBdCB0YXJnZXRzIiwicGl0Y2giOiJSYW5kb20iLCJkZWZlbnNpdmVfYWFfZW5hYmxlIjp0cnVlLCJib2R5X3lhdyI6Ik9wcG9zaXRlIiwieWF3IjoiU3BpbiIsInlhd192YWx1ZSI6MzksInlhd19qaXR0ZXJfdmFsdWUiOi0xNDQsInlhd19qaXR0ZXIiOiJTa2l0dGVyIiwiYm9keV95YXdfdmFsdWUiOjE4MCwicGl0Y2hfdmFsdWUiOjAsImZvcmNlX2RlZmVuc2l2ZSI6dHJ1ZX1dXQ==") end)
+    },
+
+    visual = {
+        enable_rgb = group:checkbox("Enable RGB effects"),
+        rgb_speed = group:slider("RGB speed", 0.5, 5.0, 2.0, true, "x"),
+        indicators = group:checkbox("Nebula indicators"),
+        indicator_style = group:combobox("Indicator style", "Minimal", "Standard", "Advanced", "Neon", "Gaming"),
+        watermark = group:checkbox("Nebula watermark"),
+        watermark_style = group:combobox("Watermark style", "Classic", "Modern", "Animated", "Minimal"),
+        color = group:color_picker("Accent color", 85, 165, 245, 255),
+        second_color = group:color_picker("Secondary color", 255, 150, 220, 255),
+        hotbar = group:checkbox("Feature hotbar"),
+        hotbar_style = group:combobox("Hotbar style", "Bottom", "Left", "Right", "Top"),
+        hotbar_offset = group:slider("Hotbar offset", 0, 500, 100, true, "px"),
+        scope_overlay = group:checkbox("Custom scope overlay"),
+        scope_style = group:combobox("Scope style", "Default", "Thin", "Dot", "Cross", "Dynamic"),
+        logs = group:checkbox("Hit logs"),
+        log_style = group:combobox("Log style", "Chat", "Screen", "Both"),
+        arrow_indicators = group:checkbox("Manual AA arrows"),
+        arrows_color = group:color_picker("Arrows color", 85, 165, 245, 255),
+        keybind_list = group:checkbox("Show active keybinds"),
+        spectator_list = group:checkbox("Show spectator list")
+    },
+
+    misc = {
+        console_filter = group:checkbox("Console filter"),
+        legit_aa = group:checkbox("Legit AA on key"),
+        legit_aa_key = group:hotkey("Legit AA key"),
+        slow_walk = group:checkbox("Enhanced slow walk"),
+        slow_speed = group:slider("Slow walk speed", 0, 100, 45, true, "%"),
+        fake_duck = group:checkbox("Improved fake duck"),
+        discharge = group:checkbox("Auto discharge exploit"),
+        d_mode = group:combobox("Mode", "Instant", "Ideal", "Adaptive"),
+        clan_tag = group:checkbox("Nebula clantag changer"),
+        tag_style = group:combobox("Tag style", "Static", "Animated", "Pulse", "Wave"),
+        custom_hitsound = group:checkbox("Custom hitsound"),
+        hitsound_volume = group:slider("Volume", 0, 100, 80, true, "%"),
+        performance_mode = group:checkbox("Performance mode"),
+        fast_ladder = group:checkbox("Fast ladder movement"),
+        auto_peek_fix = group:checkbox("Auto-peek fix"),
+        safe_knife = group:checkbox("Safe knife attack")
+    }
+}
+
+-- Создаем элементы из массива изменений в changelog
+for i, change in ipairs(script_info.changelog) do
+    _ui.main.changelog_items[i] = group:label("• " .. change)
+end
+
+-- [ Anti-aim builder ]
+aa_builder = {}
+aa_builder_defensive = {}
+
+for i = 1, 7 do
+    aa_builder[i] = {}
+    aa_builder[i].override = group:checkbox("Override \v"..aa_state_full[i].."\r player state")
+    aa_builder[i].pitch = group:combobox("\v"..aa_state_full[i].."\r  Pitch", "Off", "Down", "Up", "Random", "Custom")
+    aa_builder[i].yaw_base = group:combobox("\v"..aa_state_full[i].."\r  Yaw base", "Local view", "At targets")
+    aa_builder[i].yaw = group:combobox("\v"..aa_state_full[i].."\r  Yaw", "Off", "180", "Spin", "Static", "Jitter")
+    aa_builder[i].yaw_value = group:slider("\v"..aa_state_full[i].."\r  Yaw offset", -180, 180, 0)
+    aa_builder[i].yaw_jitter = group:combobox("\v"..aa_state_full[i].."\r  Yaw jitter", "Off", "Offset", "Center", "Random", "Skitter")
+    aa_builder[i].yaw_jitter_value = group:slider("\v"..aa_state_full[i].."\r  Yaw jitter  ", -180, 180, 0)
+    aa_builder[i].body_yaw = group:combobox("\v"..aa_state_full[i].."\r  Body yaw", "Off", "Opposite", "Jitter", "Static")
+    aa_builder[i].body_yaw_value = group:slider("\v"..aa_state_full[i].."\r  Body yaw value ", -180, 180, 0)
+    aa_builder[i].freestand_body_yaw = group:checkbox("\v"..aa_state_full[i].."\r  Freestanding body yaw")
+
+    aa_builder_defensive[i] = {}
+    aa_builder_defensive[i].defensive_modifiers = group:checkbox("\v"..aa_state_full[i].."\r  Defensive modifiers")
+    aa_builder_defensive[i].force_defensive = group:checkbox("\v"..aa_state_full[i].."\r  Force defensive")
+    aa_builder_defensive[i].defensive_aa_enable = group:checkbox("\v"..aa_state_full[i].."\r  Defensive anti-aim")
+    aa_builder_defensive[i].pitch = group:combobox("\v"..aa_state_full[i].."\r  Defensive pitch", "Off", "Down", "Up", "Random", "Custom")
+    aa_builder_defensive[i].pitch_value = group:slider("\v"..aa_state_full[i].."\r  Defensive pitch value", -89, 89, 0)
+    aa_builder_defensive[i].yaw_base = group:combobox("\v"..aa_state_full[i].."\r  Defensive yaw base", "Local view", "At targets")
+    aa_builder_defensive[i].yaw = group:combobox("\v"..aa_state_full[i].."\r  Defensive yaw", "Off", "180", "Spin", "Static", "Jitter")
+    aa_builder_defensive[i].yaw_value = group:slider("\v"..aa_state_full[i].."\r  Defensive yaw offset", -180, 180, 0)
+    aa_builder_defensive[i].yaw_jitter = group:combobox("\v"..aa_state_full[i].."\r  Defensive yaw jitter", "Off", "Offset", "Center", "Random", "Skitter")
+    aa_builder_defensive[i].yaw_jitter_value = group:slider("\v"..aa_state_full[i].."\r  Defensive yaw jitter  ", -180, 180, 0)
+    aa_builder_defensive[i].body_yaw = group:combobox("\v"..aa_state_full[i].."\r  Defensive body yaw", "Off", "Opposite", "Jitter", "Static")
+    aa_builder_defensive[i].body_yaw_value = group:slider("\v"..aa_state_full[i].."\r  Defensive body yaw value ", -180, 180, 0)
+end
+
+-- [ UI Visibility settings ]
+_ui.lua.tab:depend({_ui.lua.enable, true})
+
+-- Main tab
+for _, element in pairs(_ui.main) do
+    if type(element) == "table" and element.ref then
+        element:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Main"})
+    end
+end
+
+-- Для элементов changelog в массиве
+for _, element in pairs(_ui.main.changelog_items) do
+    if element and element.ref then
+        element:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Main"})
+    end
+end
+
+-- Anti-aim
+_ui.antiaim.enable:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"})
+_ui.antiaim.tab:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true})
+_ui.antiaim.condition:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"})
+
+for i = 1, 7 do
+    aa_builder[i].override:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]})
+    aa_builder[i].pitch:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true})
+    aa_builder[i].yaw_base:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true})
+    aa_builder[i].yaw:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true})
+    aa_builder[i].yaw_value:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true}, {aa_builder[i].yaw, "180", "Spin", "Static", "Jitter"})
+    aa_builder[i].yaw_jitter:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true})
+    aa_builder[i].yaw_jitter_value:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true}, {aa_builder[i].yaw_jitter, "Offset", "Center", "Random", "Skitter"})
+    aa_builder[i].body_yaw:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true})
+    aa_builder[i].body_yaw_value:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true}, {aa_builder[i].body_yaw, "Jitter", "Static"})
+    aa_builder[i].freestand_body_yaw:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true}, {aa_builder[i].body_yaw, "Opposite", "Jitter", "Static"})
+
+    aa_builder_defensive[i].defensive_modifiers:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder[i].override, true})
+    aa_builder_defensive[i].force_defensive:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder[i].override, true})
+    aa_builder_defensive[i].defensive_aa_enable:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder[i].override, true})
+    aa_builder_defensive[i].pitch:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder[i].override, true}, {aa_builder_defensive[i].defensive_aa_enable, true})
+    aa_builder_defensive[i].pitch_value:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].pitch, "Custom"}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder[i].override, true}, {aa_builder_defensive[i].defensive_aa_enable, true})
+    aa_builder_defensive[i].yaw_base:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder[i].override, true}, {aa_builder_defensive[i].defensive_aa_enable, true})
+    aa_builder_defensive[i].yaw:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder[i].override, true}, {aa_builder_defensive[i].defensive_aa_enable, true})
+    aa_builder_defensive[i].yaw_value:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder_defensive[i].yaw, "180", "Spin", "Static", "Jitter"}, {aa_builder[i].override, true}, {aa_builder_defensive[i].defensive_aa_enable, true})
+    aa_builder_defensive[i].yaw_jitter:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder[i].override, true}, {aa_builder_defensive[i].defensive_aa_enable, true})
+
+    aa_builder_defensive[i].yaw_jitter_value:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder_defensive[i].yaw_jitter, "Offset", "Center", "Random", "Skitter"}, {aa_builder[i].override, true}, {aa_builder_defensive[i].defensive_aa_enable, true})
+    aa_builder_defensive[i].body_yaw:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder[i].override, true}, {aa_builder_defensive[i].defensive_aa_enable, true})
+    aa_builder_defensive[i].body_yaw_value:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Builder"}, {_ui.antiaim.condition, aa_state_full[i]}, {aa_builder_defensive[i].defensive_modifiers, true}, {aa_builder_defensive[i].body_yaw, "Jitter", "Static"}, {aa_builder[i].override, true}, {aa_builder_defensive[i].defensive_aa_enable, true})
+end
+
+for k,v in pairs({_ui.antiaim.tweaks, _ui.antiaim.freestanding, _ui.antiaim.edge_yaw, _ui.antiaim.manual_left, _ui.antiaim.manual_right, _ui.antiaim.manual_back, _ui.antiaim.cfg_export, _ui.antiaim.cfg_import, _ui.antiaim.cfg_reset, _ui.antiaim.cfg_default}) do
+    v:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Anti-aim"}, {_ui.antiaim.enable, true}, {_ui.antiaim.tab, "Settings"})
+end
+
+-- Visuals tab
+for k,v in pairs({_ui.visual.enable_rgb, _ui.visual.rgb_speed, _ui.visual.indicators, _ui.visual.watermark, _ui.visual.color, _ui.visual.second_color, _ui.visual.scope_overlay, _ui.visual.logs, _ui.visual.arrow_indicators, _ui.visual.arrows_color, _ui.visual.hotbar, _ui.visual.keybind_list, _ui.visual.spectator_list}) do
+    v:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Visuals"})
+end
+
+_ui.visual.indicator_style:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Visuals"}, {_ui.visual.indicators, true})
+_ui.visual.watermark_style:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Visuals"}, {_ui.visual.watermark, true})
+_ui.visual.scope_style:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Visuals"}, {_ui.visual.scope_overlay, true})
+_ui.visual.log_style:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Visuals"}, {_ui.visual.logs, true})
+_ui.visual.hotbar_style:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Visuals"}, {_ui.visual.hotbar, true})
+_ui.visual.hotbar_offset:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Visuals"}, {_ui.visual.hotbar, true})
+
+-- Misc
+for k,v in pairs({_ui.misc.console_filter, _ui.misc.legit_aa, _ui.misc.slow_walk, _ui.misc.fake_duck, _ui.misc.discharge, _ui.misc.clan_tag, _ui.misc.custom_hitsound, _ui.misc.performance_mode, _ui.misc.fast_ladder, _ui.misc.auto_peek_fix, _ui.misc.safe_knife}) do
+    v:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Miscellaneous"})
+end
+_ui.misc.d_mode:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Miscellaneous"}, {_ui.misc.discharge, true})
+_ui.misc.legit_aa_key:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Miscellaneous"}, {_ui.misc.legit_aa, true})
+_ui.misc.slow_speed:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Miscellaneous"}, {_ui.misc.slow_walk, true})
+_ui.misc.tag_style:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Miscellaneous"}, {_ui.misc.clan_tag, true})
+_ui.misc.hitsound_volume:depend({_ui.lua.enable, true}, {_ui.lua.tab, "Miscellaneous"}, {_ui.misc.custom_hitsound, true})
+
+-- Hide refs
+local hide_refs = function(value)
+    value = not value
+    ui.set_visible(ref.aa_enable, value)
+    ui.set_visible(ref.pitch, value)
+    ui.set_visible(ref.pitch_value, value)
+    ui.set_visible(ref.yaw_base, value)
+    ui.set_visible(ref.yaw, value)
+    ui.set_visible(ref.yaw_value, value)
+    ui.set_visible(ref.yaw_jitter, value)
+    ui.set_visible(ref.yaw_jitter_value, value)
+    ui.set_visible(ref.body_yaw, value)
+    ui.set_visible(ref.body_yaw_value, value)
+    ui.set_visible(ref.edgeyaw, value)
+    ui.set_visible(ref.freestand[1], value)
+    ui.set_visible(ref.freestand[2], value)
+    ui.set_visible(ref.roll, value)
+    ui.set_visible(ref.freestand_body_yaw, value)
+end
+
+-- [ Config system ]
+local config_items = {
+    _ui.antiaim,
+    aa_builder,
+    aa_builder_defensive
+}
+
+local package, data, encrypted, decrypted = pui.setup(config_items), "", "", ""
+config = {}
+
+config.export = function()
+    data = package:save()
+    encrypted = base64.encode(json.stringify(data))
+    clipboard_export(encrypted)
+    client.color_log(85, 165, 245, "[NEBULA] ", 255, 255, 255, "Configuration exported to clipboard!")
+end
+
+config.import = function(input)
+    decrypted = json.parse(base64.decode(input ~= nil and input or clipboard_import()))
+    package:load(decrypted)
+    if input == nil then
+        client.color_log(85, 165, 245, "[NEBULA] ", 255, 255, 255, "Configuration imported from clipboard!")
+    end
+end
+
+-- [ Feature tracking for hotbar ]
+local active_features = {
+    dt = false,
+    hs = false,
+    fd = false,
+    sw = false,
+    fs = false,
+    edge = false,
+    manual = false,
+    manual_dir = 0, -- 0 = none, 1 = left, 2 = right, 3 = back
+    legit_aa = false,
+    discharge = false,
+    defensive = false
+}
+
+-- Function to update active features list
+local function update_active_features()
+    active_features.dt = ui.get(ref.doubletap[2])
+    active_features.hs = ui.get(ref.quick_peek[2])
+    active_features.fd = ui.get(ref.fakeduck)
+    active_features.sw = ui.get(ref.slide[2])
+    active_features.fs = ui.get(_ui.antiaim.freestanding.ref)
+    active_features.edge = ui.get(_ui.antiaim.edge_yaw.ref)
+    active_features.manual = manual_direction ~= nil and manual_direction > 0
+    active_features.manual_dir = manual_direction or 0
+    active_features.legit_aa = _ui.misc.legit_aa.value and ui.get(_ui.misc.legit_aa_key.ref)
+
+    -- Проверка на nil до обращения к методам и свойствам
+    if entity.get_local_player() ~= nil and entity.get_player_weapon(entity.get_local_player()) ~= nil then
+        local weapon_class = entity.get_classname(entity.get_player_weapon(entity.get_local_player()))
+        if weapon_class ~= nil then
+            active_features.discharge = _ui.misc.discharge.value and is_vulnerable() and (weapon_class == "CWeaponSSG08" or weapon_class == "CWeaponAWP")
+        else
+            active_features.discharge = false
+        end
+    else
+        active_features.discharge = false
+    end
+
+    active_features.defensive = is_defensive_active()
+end
+
+-- [ Anti-aim features ]
+local function choking(cmd)
+    local choke = false
+    if cmd.allow_send_packet == false or cmd.chokedcommands > 1 then
+        choke = true
+    else
+        choke = false
+    end
+    return choke
+end
+
+-- Manual AA variables
+local manual_yaw = 0
+local manual_direction = 0 -- 0 = none, 1 = left, 2 = right, 3 = back
+
+local antiaim_features = function(cmd)
+    if not _ui.antiaim.enable.value or not _ui.lua.enable.value or not entity.get_local_player() or not entity.is_alive(entity.get_local_player()) then return end
+
+    local state = get_state(get_velocity())
+    local players = entity.get_players(true)
+    if not players then players = {} end
+
+    local get_override = aa_builder[state] and aa_builder[state].override and aa_builder[state].override.value and state or 1
+
+    ui.set(ref.roll, 0)
+    ui.set(ref.freestand[2], "Always on")
+
+    -- Handle manual AA
+    if ui.get(_ui.antiaim.manual_left.ref) then
+        manual_direction = 1
+        manual_yaw = 90
+    elseif ui.get(_ui.antiaim.manual_right.ref) then
+        manual_direction = 2
+        manual_yaw = -90
+    elseif ui.get(_ui.antiaim.manual_back.ref) then
+        manual_direction = 3
+        manual_yaw = 180
+    end
+
+    -- Apply manual yaw if active
+    if manual_direction > 0 then
+        ui.set(ref.yaw, "180")
+        ui.set(ref.yaw_value, manual_yaw)
+    else
+        -- Anti-aim builder
+        for k, v in pairs(ref) do
+            local key = nil
+
+            if is_defensive_active() and not choking(cmd) and
+               aa_builder_defensive[get_override] and
+               aa_builder_defensive[get_override].defensive_modifiers and
+               aa_builder_defensive[get_override].defensive_modifiers.value and
+               aa_builder_defensive[get_override].defensive_aa_enable and
+               aa_builder_defensive[get_override].defensive_aa_enable.value then
+                key = aa_builder_defensive[get_override][k]
+            elseif aa_builder[get_override] then
+                key = aa_builder[get_override][k]
+            end
+
+            if key and key.value ~= nil then
+                ui.set(v, key.value)
+            end
+        end
+    end
+
+    -- Safe head
+    if contains(_ui.antiaim.tweaks.value, "Safe head") then
+        for i, v in pairs(players) do
+            local local_player = entity.get_local_player()
+            if local_player and v then
+                local local_player_origin = vector(entity.get_origin(local_player))
+                local player_origin = vector(entity.get_origin(v))
+
+                if local_player_origin and player_origin then
+                    local difference = (local_player_origin.z - player_origin.z)
+                    local local_player_weapon = entity.get_player_weapon(local_player) and entity.get_classname(entity.get_player_weapon(local_player))
+
+                    if ((local_player_weapon == "CKnife" and state == 5 and difference > -70) or difference > 65) and not is_defensive_active() then
+                        ui.set(ref.pitch, "Down")
+                        ui.set(ref.yaw, "180")
+                        ui.set(ref.yaw_value, -1)
+                        ui.set(ref.yaw_base, "At targets")
+                        ui.set(ref.yaw_jitter, "Off")
+                        ui.set(ref.body_yaw, "Static")
+                        ui.set(ref.body_yaw_value, 0)
+                        ui.set(ref.freestand_body_yaw, false)
+                    end
+                end
+            end
+        end
+    end
+
+    -- Anti-backstab
+    if contains(_ui.antiaim.tweaks.value, "Anti-backstab") then
+        for i, v in pairs(players) do
+            if v and entity.is_alive(v) then
+                local player_weapon = entity.get_player_weapon(v) and entity.get_classname(entity.get_player_weapon(v))
+                if player_weapon then
+                    local player_distance = math.floor(vector(entity.get_origin(v)):dist(vector(entity.get_origin(entity.get_local_player()))) / 7)
+
+                    if player_weapon == "CKnife" then
+                        if player_distance and player_distance < 25 then
+                            ui.set(ref.yaw, "180")
+                            ui.set(ref.yaw_value, -180)
+                            ui.set(ref.yaw_base, "At targets")
+                            ui.set(ref.yaw_jitter, "Off")
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Anti-resolver
+    if contains(_ui.antiaim.tweaks.value, "Anti-resolver") then
+        local inverter_value = globals.tickcount() % 4
+        if inverter_value < 2 then
+            if ui.get(ref.body_yaw) == "Jitter" or ui.get(ref.body_yaw) == "Static" then
+                ui.set(ref.body_yaw_value, math.random(-58, -115))
+            end
+        end
+    end
+
+    -- Force defensive
+    if cmd and aa_builder_defensive[get_override] and aa_builder_defensive[get_override].force_defensive and aa_builder_defensive[get_override].force_defensive.value then
+        cmd.force_defensive = true
+    end
+
+    -- Legit AA on key
+    if _ui.misc.legit_aa.value and ui.get(_ui.misc.legit_aa_key.ref) then
+        ui.set(ref.pitch, "Off")
+        ui.set(ref.yaw, "180")
+        ui.set(ref.yaw_value, 180)
+        ui.set(ref.yaw_jitter, "Off")
+        ui.set(ref.body_yaw, "Static")
+        ui.set(ref.body_yaw_value, 180)
+    end
+
+    -- Enhanced slow walk
+    if _ui.misc.slow_walk.value and ui.get(ref.slide[1]) then
+        local speed = _ui.misc.slow_speed.value / 100
+        local vel_x = entity.get_prop(entity.get_local_player(), "m_vecVelocity[0]")
+        local vel_y = entity.get_prop(entity.get_local_player(), "m_vecVelocity[1]")
+
+        -- Calculate speed and limit it
+        local speed_2d = math.sqrt(vel_x * vel_x + vel_y * vel_y)
+        local max_speed = 70 * speed -- Adjust as needed
+
+        if speed_2d > max_speed then
+            -- Calculate movement angles
+            local move_yaw = math.atan2(vel_y, vel_x) * 180 / math.pi
+            local fwd = math.cos(math.rad(move_yaw)) * max_speed / speed_2d
+            local sdw = math.sin(math.rad(move_yaw)) * max_speed / speed_2d
+
+            -- Apply limits
+            cmd.forwardmove = cmd.forwardmove * fwd
+            cmd.sidemove = cmd.sidemove * sdw
+        end
+    end
+
+    -- Improved fake duck
+    if _ui.misc.fake_duck.value and ui.get(ref.fakeduck) then
+        if cmd.command_number % 4 == 0 then
+            cmd.in_duck = 1
+        else
+            cmd.in_duck = 0
+        end
+    end
+
+    -- Fast ladder
+    if _ui.misc.fast_ladder.value then
+        local flags = entity.get_prop(entity.get_local_player(), "m_fFlags")
+        local on_ladder = entity.get_prop(entity.get_local_player(), "m_MoveType") == 9
+
+        if on_ladder then
+            local pitch = entity.get_prop(entity.get_local_player(), "m_viewPunchAngle[0]") or 0
+            if pitch < 45 then
+                cmd.forwardmove = 0
+                cmd.in_forward = 1
+                cmd.in_back = 0
+                cmd.in_moveleft = 0
+                cmd.in_moveright = 0
+                cmd.in_jump = 0
+                cmd.move_yaw = cmd.yaw
+            else
+                cmd.forwardmove = 0
+                cmd.in_forward = 0
+                cmd.in_back = 1
+                cmd.in_moveleft = 0
+                cmd.in_moveright = 0
+                cmd.in_jump = 0
+                cmd.move_yaw = cmd.yaw
+            end
+        end
+    end
+
+    -- Safe knife attack
+    if _ui.misc.safe_knife.value then
+        local weapon_ent = entity.get_player_weapon(entity.get_local_player())
+        if weapon_ent and entity.get_classname(weapon_ent) == "CKnife" then
+            -- Only allow attacks when close enough or facing back of enemy
+            for _, enemy in ipairs(entity.get_players(true)) do
+                local distance = vector(entity.get_origin(entity.get_local_player())):dist(vector(entity.get_origin(enemy)))
+
+                if distance > 150 then  -- Prevent attacking from too far
+                    cmd.in_attack = 0
+                    cmd.in_attack2 = 0
+                end
+            end
+        end
+    end
+
+    -- Auto-peek fix
+    if _ui.misc.auto_peek_fix.value and ui.get(ref.quick_peek[2]) then
+        -- Implement quick peek improvements
+        if (cmd.command_number % 2) == 0 then
+            cmd.allow_send_packet = false
+        end
+    end
+
+    -- Binds
+    ui.set(ref.freestand[1], ui.get(_ui.antiaim.freestanding.ref) and true or false)
+    ui.set(ref.edgeyaw, ui.get(_ui.antiaim.edge_yaw.ref) and true or false)
+
+    -- Update feature tracking for hotbar
+    update_active_features()
+end
+
+-- [ Console filter ]
+local function setup_console_filter()
+    if _ui.misc.console_filter.value then
+        cvar.con_filter_text:set_string("nebula")
+        cvar.con_filter_enable:set_int(1)
+    else
+        cvar.con_filter_enable:set_int(0)
+    end
+end
+
+-- [ Auto discharge exploit ]
+local auto_discharge = function(cmd)
+    if not _ui.misc.discharge.value or not _ui.lua.enable.value or
+       not entity.get_local_player() or not entity.is_alive(entity.get_local_player()) or
+       ui.get(ref.quick_peek[2]) or not ui.get(ref.doubletap[2]) then
+        return
+    end
+
+    local weapon_ent = entity.get_player_weapon(entity.get_local_player())
+    if not weapon_ent then return end
+
+    local weapon_class = entity.get_classname(weapon_ent)
+    if weapon_class ~= "CWeaponSSG08" and weapon_class ~= "CWeaponAWP" then return end
+
+    local vel_2 = entity.get_prop(entity.get_local_player(), "m_vecVelocity[2]") or 0
+
+    if is_vulnerable() then
+        if _ui.misc.d_mode.value == "Ideal" then
+            if vel_2 > 20 then
+                return
+            end
+        elseif _ui.misc.d_mode.value == "Adaptive" then
+            -- Add adaptive logic based on situation
+            if vel_2 > 30 or math.abs(entity.get_prop(entity.get_local_player(), "m_flVelocityModifier") or 1) < 0.8 then
+                return
+            end
+        end
+        cmd.in_jump = false
+        cmd.discharge_pending = true
+    end
+end
+
+-- [ Spectator list ]
+local spectators = {
+    list = {},
+    drag = {x = 100, y = 100, dragging = false, offset_x = 0, offset_y = 0},
+    width = 150,
+    height = 25,
+    alpha = 0,
+}
+
+local function update_spectators()
+    spectators.list = {}
+
+    if not entity.get_local_player() or not entity.is_alive(entity.get_local_player()) then
+        return
+    end
+
+    local player_resource = entity.get_player_resource()
+    if not player_resource then return end
+
+    for i = 1, globals.maxplayers() do
+        if entity.get_prop(player_resource, "m_bConnected", i) == 1 and not entity.is_alive(i) then
+            local observer_target = entity.get_prop(i, "m_hObserverTarget")
+            local observer_mode = entity.get_prop(i, "m_iObserverMode")
+
+            if observer_target == entity.get_local_player() and observer_mode ~= 0 then
+                table.insert(spectators.list, {name = entity.get_player_name(i), index = i})
+            end
+        end
+    end
+
+    -- Update height based on number of spectators
+    spectators.height = 25 + (#spectators.list * 20)
+
+    -- Update alpha for smooth fade
+    spectators.alpha = _ui.visual.spectator_list.value and math.min(spectators.alpha + 0.1, 1) or math.max(spectators.alpha - 0.1, 0)
+end
+
+local function render_spectators()
+    if spectators.alpha <= 0 then return end
+
+    local r, g, b = get_rgb(_ui.visual.rgb_speed.value, 0)
+    if not _ui.visual.enable_rgb.value then
+        r, g, b = _ui.visual.color.r, _ui.visual.color.g, _ui.visual.color.b
+    end
+
+    -- Handle dragging
+    local mouse_x, mouse_y = ui.mouse_position()
+    if ui.is_menu_open() then
+        if client.key_state(0x01) then -- 0x01 - левая кнопка мыши
+            if spectators.drag.dragging then
+                spectators.drag.x = mouse_x - spectators.drag.offset_x
+                spectators.drag.y = mouse_y - spectators.drag.offset_y
+            elseif mouse_x >= spectators.drag.x and mouse_x <= spectators.drag.x + spectators.width and
+                   mouse_y >= spectators.drag.y and mouse_y <= spectators.drag.y + 25 then
+                spectators.drag.dragging = true
+                spectators.drag.offset_x = mouse_x - spectators.drag.x
+                spectators.drag.offset_y = mouse_y - spectators.drag.y
+            end
+        else
+            spectators.drag.dragging = false
+        end
+    end
+
+    -- Draw spectator list
+    renderer.rectangle(spectators.drag.x, spectators.drag.y, spectators.width, 25, 16, 16, 16, 200 * spectators.alpha)
+    renderer.gradient(spectators.drag.x, spectators.drag.y, spectators.width, 2, r, g, b, 255 * spectators.alpha, r * 0.7, g * 0.7, b * 0.7, 150 * spectators.alpha, true)
+    renderer.text(spectators.drag.x + spectators.width/2, spectators.drag.y + 12, 255, 255, 255, 255 * spectators.alpha, "c", 0, "Spectators: " .. #spectators.list)
+
+    if #spectators.list > 0 then
+        renderer.rectangle(spectators.drag.x, spectators.drag.y + 25, spectators.width, #spectators.list * 20, 16, 16, 16, 150 * spectators.alpha)
+
+        for i, spec in ipairs(spectators.list) do
+            renderer.text(spectators.drag.x + 10, spectators.drag.y + 25 + (i-1) * 20 + 10, 255, 255, 255, 255 * spectators.alpha, "-", 0, spec.name)
+        end
+    end
+end
+
+-- [ Active keybinds list ]
+local keybinds = {
+    list = {},
+    drag = {x = 100, y = 300, dragging = false, offset_x = 0, offset_y = 0},
+    width = 150,
+    height = 25,
+    alpha = 0,
+}
+
+local function update_keybinds()
+    keybinds.list = {}
+
+    -- Add active keybinds to list
+    if ui.get(ref.doubletap[2]) then table.insert(keybinds.list, {name = "Double tap", key = "DT"}) end
+    if ui.get(ref.quick_peek[2]) then table.insert(keybinds.list, {name = "On-shot", key = "HS"}) end
+    if ui.get(ref.fakeduck) then table.insert(keybinds.list, {name = "Fake duck", key = "FD"}) end
+    if ui.get(ref.slide[2]) then table.insert(keybinds.list, {name = "Slow walk", key = "SW"}) end
+    if ui.get(_ui.antiaim.freestanding.ref) then table.insert(keybinds.list, {name = "Freestanding", key = "FS"}) end
+    if ui.get(_ui.antiaim.edge_yaw.ref) then table.insert(keybinds.list, {name = "Edge yaw", key = "EDGE"}) end
+
+    if manual_direction == 1 then table.insert(keybinds.list, {name = "Manual AA", key = "LEFT"})
+    elseif manual_direction == 2 then table.insert(keybinds.list, {name = "Manual AA", key = "RIGHT"})
+    elseif manual_direction == 3 then table.insert(keybinds.list, {name = "Manual AA", key = "BACK"}) end
+
+    if _ui.misc.legit_aa.value and ui.get(_ui.misc.legit_aa_key.ref) then table.insert(keybinds.list, {name = "Legit AA", key = "LEGIT"}) end
+
+    -- Update height based on number of keybinds
+    keybinds.height = 25 + (#keybinds.list * 20)
+
+    -- Update alpha for smooth fade
+    keybinds.alpha = _ui.visual.keybind_list.value and math.min(keybinds.alpha + 0.1, 1) or math.max(keybinds.alpha - 0.1, 0)
+end
+
+local function render_keybinds()
+    if keybinds.alpha <= 0 then return end
+
+    local r, g, b = get_rgb(_ui.visual.rgb_speed.value, 2)
+    if not _ui.visual.enable_rgb.value then
+        r, g, b = _ui.visual.color.r, _ui.visual.color.g, _ui.visual.color.b
+    end
+
+    -- Handle dragging
+    local mouse_x, mouse_y = ui.mouse_position()
+    if ui.is_menu_open() then
+        if client.key_state(0x01) then -- 0x01 - левая кнопка мыши
+            if keybinds.drag.dragging then
+                keybinds.drag.x = mouse_x - keybinds.drag.offset_x
+                keybinds.drag.y = mouse_y - keybinds.drag.offset_y
+            elseif mouse_x >= keybinds.drag.x and mouse_x <= keybinds.drag.x + keybinds.width and
+                   mouse_y >= keybinds.drag.y and mouse_y <= keybinds.drag.y + 25 then
+                keybinds.drag.dragging = true
+                keybinds.drag.offset_x = mouse_x - keybinds.drag.x
+                keybinds.drag.offset_y = mouse_y - keybinds.drag.y
+            end
+        else
+            keybinds.drag.dragging = false
+        end
+    end
+
+    -- Draw keybinds list
+    renderer.rectangle(keybinds.drag.x, keybinds.drag.y, keybinds.width, 25, 16, 16, 16, 200 * keybinds.alpha)
+    renderer.gradient(keybinds.drag.x, keybinds.drag.y, keybinds.width, 2, r, g, b, 255 * keybinds.alpha, r * 0.7, g * 0.7, b * 0.7, 150 * keybinds.alpha, true)
+    renderer.text(keybinds.drag.x + keybinds.width/2, keybinds.drag.y + 12, 255, 255, 255, 255 * keybinds.alpha, "c", 0, "Active binds: " .. #keybinds.list)
+
+    if #keybinds.list > 0 then
+        renderer.rectangle(keybinds.drag.x, keybinds.drag.y + 25, keybinds.width, #keybinds.list * 20, 16, 16, 16, 150 * keybinds.alpha)
+
+        for i, bind in ipairs(keybinds.list) do
+            renderer.text(keybinds.drag.x + 10, keybinds.drag.y + 25 + (i-1) * 20 + 10, 255, 255, 255, 255 * keybinds.alpha, "-", 0, bind.name)
+            renderer.text(keybinds.drag.x + keybinds.width - 10, keybinds.drag.y + 25 + (i-1) * 20 + 10, r, g, b, 255 * keybinds.alpha, "r", 0, bind.key)
+        end
+    end
+end
+
+-- [ Hotbar ]
+local hotbar = {
+    elements = {},
+    position = {x = 0, y = 0},
+    size= {width = 0, height = 0},
+    animation = 0
+}
+
+-- Initialize hotbar data
+hotbar.setup = function()
+    local screen_w, screen_h = client.screen_size()
+    local style = _ui.visual.hotbar_style.value
+    local offset = _ui.visual.hotbar_offset.value
+
+    hotbar.elements = {}
+
+    -- Add elements based on active features
+    if active_features.dt then
+        table.insert(hotbar.elements, {name = "DT", color = {r = 100, g = 255, b = 100, a = 255}})
+    end
+
+    if active_features.hs then
+        table.insert(hotbar.elements, {name = "HS", color = {r = 255, g = 200, b = 0, a = 255}})
+    end
+
+    if active_features.fd then
+        table.insert(hotbar.elements, {name = "FD", color = {r = 255, g = 150, b = 50, a = 255}})
+    end
+
+    if active_features.sw then
+        table.insert(hotbar.elements, {name = "SW", color = {r = 150, g = 200, b = 255, a = 255}})
+    end
+
+    if active_features.fs then
+        table.insert(hotbar.elements, {name = "FS", color = {r = 200, g = 150, b = 255, a = 255}})
+    end
+
+    if active_features.edge then
+        table.insert(hotbar.elements, {name = "EDGE", color = {r = 255, g = 100, b = 100, a = 255}})
+    end
+
+    if active_features.manual then
+        local dir_text = "AUTO"
+        if active_features.manual_dir == 1 then
+            dir_text = "LEFT"
+        elseif active_features.manual_dir == 2 then
+            dir_text = "RIGHT"
+        elseif active_features.manual_dir == 3 then
+            dir_text = "BACK"
+        end
+        table.insert(hotbar.elements, {name = dir_text, color = {r = 255, g = 170, b = 170, a = 255}})
+    end
+
+    if active_features.legit_aa then
+        table.insert(hotbar.elements, {name = "LEGIT", color = {r = 170, g = 255, b = 170, a = 255}})
+    end
+
+    if active_features.discharge then
+        table.insert(hotbar.elements, {name = "DCHG", color = {r = 255, g = 100, b = 255, a = 255}})
+    end
+
+    if active_features.defensive then
+        table.insert(hotbar.elements, {name = "DEF", color = {r = 255, g = 150, b = 50, a = 255}})
+    end
+
+    -- Calculate hotbar size
+    local element_width = 50
+    local element_height = 22
+    local padding = 5
+
+    hotbar.size = {
+        width = (#hotbar.elements * (element_width + padding)) - padding,
+        height = element_height
+    }
+
+    -- Set position based on style
+    if style == "Bottom" then
+        hotbar.position = {
+            x = screen_w / 2 - hotbar.size.width / 2,
+            y = screen_h - hotbar.size.height - offset
+        }
+    elseif style == "Top" then
+        hotbar.position = {
+            x = screen_w / 2 - hotbar.size.width / 2,
+            y = offset
+        }
+    elseif style == "Left" then
+        hotbar.position = {
+            x = offset,
+            y = screen_h / 2 - (#hotbar.elements * (element_height + padding)) / 2
+        }
+    elseif style == "Right" then
+        hotbar.position = {
+            x = screen_w - element_width - offset,
+            y = screen_h / 2 - (#hotbar.elements * (element_height + padding)) / 2
+        }
+    end
+
+    -- Update animation
+    hotbar.animation = math.min(hotbar.animation + 0.05, 1)
+end
+
+-- Render hotbar
+hotbar.render = function()
+    if not _ui.visual.hotbar.value or not _ui.lua.enable.value or not entity.is_alive(entity.get_local_player()) then
+        hotbar.animation = math.max(hotbar.animation - 0.1, 0)
+        return
+    end
+
+    hotbar.setup()
+
+    if hotbar.animation <= 0 or #hotbar.elements == 0 then
+        return
+    end
+
+    local r, g, b = _ui.visual.color.r, _ui.visual.color.g, _ui.visual.color.b
+
+    -- Use RGB if enabled
+    if _ui.visual.enable_rgb.value then
+        r, g, b = get_rgb(_ui.visual.rgb_speed.value, 0)
+    end
+
+    local element_width = 50
+    local element_height = 22
+    local padding = 5
+    local style = _ui.visual.hotbar_style.value
+
+    -- Draw elements with different layout based on style
+    if style == "Left" or style == "Right" then
+        -- Vertical layout
+        for i, element in ipairs(hotbar.elements) do
+            local x = hotbar.position.x
+            local y = hotbar.position.y + (i-1) * (element_height + padding)
+
+            -- Element background with accent color
+            renderer.rectangle(
+                x, y, element_width, element_height,
+                25, 25, 25, 180 * hotbar.animation
+            )
+
+            -- Element accent (left/right side)
+            if style == "Left" then
+                renderer.rectangle(
+                    x, y, 2, element_height,
+                    element.color.r, element.color.g, element.color.b, 255 * hotbar.animation
+                )
+            else
+                renderer.rectangle(
+                    x + element_width - 2, y, 2, element_height,
+                    element.color.r, element.color.g, element.color.b, 255 * hotbar.animation
+                )
+            end
+
+            -- Element text
+            renderer.text(
+                x + element_width / 2, y + element_height / 2,
+                element.color.r, element.color.g, element.color.b, 255 * hotbar.animation,
+                "c", 0, element.name
+            )
+        end
+    else
+        -- Horizontal layout (Bottom/Top)
+        -- Draw base panel with slight transparency and gradient border
+        renderer.rectangle(
+            hotbar.position.x - 5, hotbar.position.y - 3,
+            hotbar.size.width + 10, hotbar.size.height + 6,
+            25, 25, 25, 180 * hotbar.animation
+        )
+
+        -- Draw gradient border
+        renderer.gradient(
+            hotbar.position.x - 5, hotbar.position.y - 3,
+            hotbar.size.width + 10, 2,
+            r, g, b, 255 * hotbar.animation,
+            r * 0.5, g * 0.5, b * 0.5, 100 * hotbar.animation,
+            true
+        )
+
+        -- Draw elements
+        for i, element in ipairs(hotbar.elements) do
+            local x = hotbar.position.x + (i-1) * (element_width + padding)
+            local y = hotbar.position.y
+
+            -- Element background with slight gradient
+            renderer.gradient(
+                x, y, element_width, element_height,
+                40, 40, 40, 180 * hotbar.animation,
+                30, 30, 30, 200 * hotbar.animation,
+                false
+            )
+
+            -- Element text with glow effect
+            renderer.text(
+                x + element_width / 2, y + element_height / 2 - 1,
+                element.color.r * 0.5, element.color.g * 0.5, element.color.b * 0.5, 100 * hotbar.animation,
+                "c", 0, element.name
+            )
+
+            renderer.text(
+                x + element_width / 2, y + element_height / 2,
+                element.color.r, element.color.g, element.color.b, 255 * hotbar.animation,
+                "c", 0, element.name
+            )
+        end
+    end
+end
+
+-- [ Visuals: Indicators ]
+local indicators = {}
+indicators.active_elements = {}
+
+-- Animation setup
+local anim_time = 0
+local anim_alpha = 0
+local anim_offset = 0
+local alpha_dir = 1
+
+-- Prepare indicator values
+indicators.setup = function()
+    local screen_w, screen_h = client.screen_size()
+    indicators.screen_center = { x = screen_w / 2, y = screen_h / 2 }
+
+    -- Get essential indicator info
+    local state = get_state(get_velocity()) or 1
+    local defensive = is_defensive_active()
+    local dt_active = ui.get(ref.doubletap[2])
+    local freestand = ui.get(_ui.antiaim.freestanding.ref)
+    local edge = ui.get(_ui.antiaim.edge_yaw.ref)
+    local bodyyaw = ui.get(ref.body_yaw) ~= "Off"
+
+    -- Update animation values
+    anim_time = globals.realtime() % 3
+    anim_alpha = math.sin(globals.realtime() * 2) * 55 + 200
+
+    if globals.realtime() % 6 > 3 then
+        anim_offset = anim_offset + 0.5
+        if anim_offset > 14 then
+            anim_offset = 14
+            alpha_dir = -1
+        end
+    else
+        anim_offset = anim_offset - 0.5
+        if anim_offset < -14 then
+            anim_offset = -14
+            alpha_dir = 1
+        end
+    end
+
+    -- Manual direction text
+    local direction_text = "AUTO"
+    if manual_direction == 1 then
+        direction_text = "LEFT"
+    elseif manual_direction == 2 then
+        direction_text = "RIGHT"
+    elseif manual_direction == 3 then
+        direction_text = "BACK"
+    end
+
+    -- Получаем цвета RGB если включено
+    local main_r, main_g, main_b = _ui.visual.color.r, _ui.visual.color.g, _ui.visual.color.b
+    if _ui.visual.enable_rgb.value then
+        main_r, main_g, main_b = get_rgb(_ui.visual.rgb_speed.value, 0)
+    end
+
+    -- Build indicator elements
+    indicators.active_elements = {
+        {
+            name = "NEBULA",
+            color = {r = main_r, g = main_g, b = main_b, a = 255},
+            active = true
+        },
+        {
+            name = aa_state[state],
+            color = {r = 255, g = 255, b = 255, a = 255},
+            active = true
+        },
+        {
+            name = "DT",
+            color = {r = dt_active and 100 or 255, g = dt_active and 255 or 100, b = dt_active and 100 or 100, a = 255},
+            active = ui.get(ref.doubletap[1])
+        },
+        {
+            name = "FS",
+            color = {r = freestand and 100 or 255, g = freestand and 255 or 100, b = freestand and 100 or 100, a = 255},
+            active = true
+        },
+        {
+            name = "EDGE",
+            color = {r = edge and 100 or 255, g = edge and 255 or 100, b = edge and 100 or 100, a = 255},
+            active = true
+        },
+        {
+            name = "DEF",
+            color = {r = defensive and 255 or 170, g = defensive and 150 or 170, b = defensive and 50 or 170, a = 255},
+            active = defensive
+        },
+        {
+            name = direction_text,
+            color = {r = 255, g = 170, b = 170, a = 255},
+            active = true
+        },
+        {
+            name = "DUCK",
+            color = {r = ui.get(ref.fakeduck) and 255 or 170, g = ui.get(ref.fakeduck) and 150 or 170, b = ui.get(ref.fakeduck) and 50 or 170, a = 255},
+            active = ui.get(ref.fakeduck)
+        }
+    }
+end
+
+-- Render indicators
+indicators.render = function()
+    if not _ui.visual.indicators.value or not _ui.lua.enable.value or not entity.is_alive(entity.get_local_player()) then
+        return
+    end
+
+    indicators.setup()
+
+    local style = _ui.visual.indicator_style.value
+    local position = indicators.screen_center
+    local offset_y = 0
+
+    -- Получаем цвета RGB если включено
+    local r, g, b = _ui.visual.color.r, _ui.visual.color.g, _ui.visual.color.b
+    local r2, g2, b2 = _ui.visual.second_color.r, _ui.visual.second_color.g, _ui.visual.second_color.b
+
+    if _ui.visual.enable_rgb.value then
+        r, g, b = get_rgb(_ui.visual.rgb_speed.value, 0)
+        r2, g2, b2 = get_rgb(_ui.visual.rgb_speed.value, 2)
+    end
+
+    if style == "Minimal" then
+        -- Minimal style - just key elements with simple dots
+        for i, element in ipairs(indicators.active_elements) do
+            if element.active then
+                local color = element.color
+                renderer.text(position.x, position.y + 30 + offset_y, color.r, color.g, color.b, color.a, "c", 0, element.name)
+                offset_y = offset_y + 12
+            end
+        end
+    elseif style == "Standard" then
+        -- Title
+        renderer.text(position.x, position.y + 30, r, g, b, 255, "cb", 0, "NEBULA")
+
+        offset_y = 15
+
+        -- Rest of indicators
+        for i=2, #indicators.active_elements do
+            local element = indicators.active_elements[i]
+            if element.active then
+                renderer.text(position.x, position.y + 30 + offset_y, element.color.r, element.color.g, element.color.b, element.color.a, "c", 0, element.name)
+                offset_y = offset_y + 12
+            end
+        end
+    elseif style == "Advanced" then
+        -- Advanced style with boxes and bars
+        -- Draw base panel
+        local panel_width = 120
+        local panel_height = 18 + 12 * #indicators.active_elements
+        local panel_x = position.x - panel_width/2
+        local panel_y = position.y + 20
+
+        -- Gradient panel background
+        renderer.rectangle(panel_x, panel_y, panel_width, panel_height, 20, 20, 20, 180)
+        renderer.gradient(panel_x, panel_y, panel_width, 2, r, g, b, 255, r2, g2, b2, 255, true)
+
+        -- Title
+        renderer.text(panel_x + panel_width/2, panel_y + 10, 255, 255, 255, 255, "c", 0, "NEBULA")
+
+        offset_y = 24
+
+        -- Indicators with status bars
+        for i=2, #indicators.active_elements do
+            local element = indicators.active_elements[i]
+            if element.active then
+                local bar_width = 40 * (math.sin(globals.realtime() * 2) * 0.25 + 0.75)
+                renderer.text(panel_x + 10, panel_y + offset_y, element.color.r, element.color.g, element.color.b, element.color.a, "-", 0, element.name)
+                renderer.gradient(panel_x + panel_width - 10 - bar_width, panel_y + offset_y + 3, bar_width, 4, element.color.r, element.color.g, element.color.b, 100, element.color.r, element.color.g, element.color.b, 220, true)
+                offset_y = offset_y + 12
+            end
+        end
+    elseif style == "Neon" then
+        -- Neon style with glow effects
+        -- Main title with glow effect
+        -- Проверка на nil перед использованием
+        if r ~= nil and g ~= nil and b ~= nil then
+            -- Shadow/glow for text
+            renderer.text(position.x + 1, position.y + 30 + 1, r * 0.3, g * 0.3, b * 0.3, 100, "cb", 0, "NEBULA")
+            -- Main text
+            renderer.text(position.x, position.y + 30, r, g, b, 255, "cb", 0, "NEBULA")
+
+            offset_y = 15
+
+            -- Indicators with glow
+            for i=2, #indicators.active_elements do
+                local element = indicators.active_elements[i]
+                if element.active then
+                    -- Shadow/glow
+                    renderer.text(position.x + 1, position.y + 30 + offset_y + 1, element.color.r * 0.3, element.color.g * 0.3, element.color.b * 0.3, 100, "c", 0, element.name)
+                    -- Main text
+                    renderer.text(position.x, position.y + 30 + offset_y, element.color.r, element.color.g, element.color.b, element.color.a, "c", 0, element.name)
+                    offset_y = offset_y + 12
+                end
+            end
+        end
+    elseif style == "Gaming" then
+        -- Gaming style with animated elements
+        -- Main title with rainbow effect
+        local rainbow_speed = 2
+        local rainbow_r = math.floor(math.sin(globals.realtime() * rainbow_speed + 0) * 127 + 128)
+        local rainbow_g = math.floor(math.sin(globals.realtime() * rainbow_speed + 2) * 127 + 128)
+        local rainbow_b = math.floor(math.sin(globals.realtime() * rainbow_speed + 4) * 127 + 128)
+
+        -- Background box
+        local panel_width = 150
+        local panel_height = 18 + 15 * #indicators.active_elements
+        local panel_x = position.x - panel_width/2
+        local panel_y = position.y + 20
+
+        -- Animated background
+        renderer.rectangle(panel_x, panel_y, panel_width, panel_height, 20, 20, 20, 180)
+
+        -- Animated border
+        for i = 0, panel_width, 20 do
+            local segment_r = math.floor(math.sin(globals.realtime() * 2 + i * 0.05) * 127 + 128)
+            local segment_g = math.floor(math.sin(globals.realtime() * 2 + i * 0.05 + 2) * 127 + 128)
+            local segment_b = math.floor(math.sin(globals.realtime() * 2 + i * 0.05 + 4) * 127 + 128)
+
+            renderer.rectangle(panel_x + i, panel_y, 20, 2, segment_r, segment_g, segment_b, 255)
+            renderer.rectangle(panel_x + i, panel_y + panel_height - 2, 20, 2, segment_r, segment_g, segment_b, 255)
+        end
+
+        -- Title with pulsing effect
+        local pulse = math.sin(globals.realtime() * 3) * 0.2 + 0.8
+        renderer.text(panel_x + panel_width/2, panel_y + 10, rainbow_r, rainbow_g, rainbow_b, 255, "cb", 0, "NEBULA")
+
+        offset_y = 24
+
+        -- Indicators with animation
+        for i=2, #indicators.active_elements do
+            local element = indicators.active_elements[i]
+            if element.active then
+                -- Create wave effect for active elements
+                local wave_offset = math.sin(globals.realtime() * 2 + i * 0.5) * 3
+
+                renderer.text(panel_x + 16, panel_y + offset_y + wave_offset, element.color.r, element.color.g, element.color.b, element.color.a, "-", 0, element.name)
+
+                -- Animated bar for active items
+                local bar_width = math.abs(math.sin(globals.realtime() * 1.5 + i * 0.7)) * 50 + 10
+                renderer.gradient(
+                    panel_x + panel_width - 16 - bar_width, panel_y + offset_y + wave_offset + 2, bar_width, 4,
+                    element.color.r * 0.5, element.color.g * 0.5, element.color.b * 0.5, 100,
+                    element.color.r, element.color.g, element.color.b, 220,
+                    true
+                )
+
+                offset_y = offset_y + 15
+            end
+        end
+    end
+end
+
+-- [ Manual AA Arrows ]
+local manual_arrows = {}
+manual_arrows.left_alpha = 0
+manual_arrows.right_alpha = 0
+manual_arrows.back_alpha = 0
+
+manual_arrows.render = function()
+    if not _ui.visual.arrow_indicators.value or not _ui.lua.enable.value or not entity.is_alive(entity.get_local_player()) then
+        return
+    end
+
+    local screen_w, screen_h = client.screen_size()
+    local center_x, center_y = screen_w / 2, screen_h / 2
+
+    -- Update alphas based on manual direction
+    manual_arrows.left_alpha = manual_direction == 1 and 255 or 40
+    manual_arrows.right_alpha = manual_direction == 2 and 255 or 40
+    manual_arrows.back_alpha = manual_direction == 3 and 255 or 40
+
+    local r, g, b = _ui.visual.arrows_color.r, _ui.visual.arrows_color.g, _ui.visual.arrows_color.b
+
+    -- Использование RGB, если включено
+    if _ui.visual.enable_rgb.value then
+        r, g, b = get_rgb(_ui.visual.rgb_speed.value, 3)
+    end
+
+    -- Draw arrows with animation
+    local pulse = math.sin(globals.realtime() * 2) * 0.3 + 0.7
+
+    -- Left arrow
+    renderer.triangle(
+        center_x - 70, center_y,
+        center_x - 50, center_y - 15,
+        center_x - 50, center_y + 15,
+        r, g, b, manual_arrows.left_alpha * pulse
+    )
+
+    -- Right arrow
+    renderer.triangle(
+        center_x + 70, center_y,
+        center_x + 50, center_y - 15,
+        center_x + 50, center_y + 15,
+        r, g, b, manual_arrows.right_alpha * pulse
+    )
+
+    -- Back arrow
+    renderer.triangle(
+        center_x, center_y + 70,
+        center_x - 15, center_y + 50,
+        center_x + 15, center_y + 50,
+        r, g, b, manual_arrows.back_alpha * pulse
+    )
+end
+
+-- [ Custom Scope ]
+local scope_data = {
+    animation = 0,
+    gap = 0,
+    length = 0
+}
+
+local scope_render = function()
+    if not _ui.visual.scope_overlay.value or not _ui.lua.enable.value or not entity.is_alive(entity.get_local_player()) then
+        return
+    end
+
+    local is_scoped = entity.get_prop(entity.get_local_player(), "m_bIsScoped") == 1 and true or false
+    local screen_w, screen_h = client.screen_size()
+    local center_x, center_y = screen_w / 2, screen_h / 2
+
+    local r, g, b, a = _ui.visual.color.r, _ui.visual.color.g, _ui.visual.color.b, 255
+
+    -- Использование RGB, если включено
+    if _ui.visual.enable_rgb.value then
+        r, g, b = get_rgb(_ui.visual.rgb_speed.value, 0)
+    end
+
+    -- Update animation
+    if is_scoped then
+        scope_data.animation = math.min(scope_data.animation + 0.05, 1)
+    else
+        scope_data.animation = math.max(scope_data.animation - 0.1, 0)
+    end
+
+    if scope_data.animation > 0 then
+        local gap = 10 * scope_data.animation
+        local length = 120 * scope_data.animation
+        local style = _ui.visual.scope_style.value
+
+        -- Hide default scope
+        if is_scoped then
+            cvar.cl_drawhud_force_deathnotices:set_int(2)
+            cvar.cl_drawhud_force_radar:set_int(1)
+        else
+            cvar.cl_drawhud_force_deathnotices:set_int(0)
+            cvar.cl_drawhud_force_radar:set_int(0)
+        end
+
+        -- Draw custom scope
+        if style == "Default" then
+            -- + style
+            renderer.line(center_x - length, center_y, center_x - gap, center_y, r, g, b, a)
+            renderer.line(center_x + gap, center_y, center_x + length, center_y, r, g, b, a)
+            renderer.line(center_x, center_y - length, center_x, center_y - gap, r, g, b, a)
+            renderer.line(center_x, center_y + gap, center_x, center_y + length, r, g, b, a)
+        elseif style == "Thin" then
+            -- Thin lines
+            renderer.line(center_x - length, center_y, center_x - gap, center_y, r, g, b, a)
+            renderer.line(center_x + gap, center_y, center_x + length, center_y, r, g, b, a)
+            renderer.line(center_x, center_y - length, center_x, center_y - gap, r, g, b, a)
+            renderer.line(center_x, center_y + gap, center_x, center_y + length, r, g, b, a)
+
+            -- Thin gradient lines for style
+            renderer.gradient(center_x - length - 5, center_y, 5, 1, r, g, b, 0, r, g, b, a, true)
+            renderer.gradient(center_x + length, center_y, 5, 1, r, g, b, a, r, g, b, 0, true)
+            renderer.gradient(center_x, center_y - length - 5, 1, 5, r, g, b, 0, r, g, b, a, false)
+            renderer.gradient(center_x, center_y + length, 1, 5, r, g, b, a, r, g, b, 0, false)
+        elseif style == "Dot" then
+            -- Center dot only
+            renderer.circle(center_x, center_y, r, g, b, a, 2, 0, 1)
+            renderer.circle_outline(center_x, center_y, r, g, b, a, 3, 0, 1, 1)
+        elseif style == "Cross" then
+            -- X style
+            renderer.line(center_x - 20, center_y - 20, center_x - 5, center_y - 5, r, g, b, a)
+            renderer.line(center_x + 5, center_y + 5, center_x + 20, center_y + 20, r, g, b, a)
+            renderer.line(center_x - 20, center_y + 20, center_x - 5, center_y + 5, r, g, b, a)
+            renderer.line(center_x + 5, center_y - 5, center_x + 20, center_y - 20, r, g, b, a)
+        elseif style == "Dynamic" then
+            -- Moving scope that changes with player movement
+            local vel_x, vel_y = entity.get_prop(entity.get_local_player(), "m_vecVelocity")
+            local speed = math.sqrt(vel_x*vel_x + vel_y*vel_y)
+            local dynamic_gap = gap + math.min(speed / 10, 20) * scope_data.animation
+            local dynamic_alpha = math.max(255 - speed / 2, 120)
+
+            -- Draw dynamic scope lines
+            renderer.line(center_x - length, center_y, center_x - dynamic_gap, center_y, r, g, b, dynamic_alpha)
+            renderer.line(center_x + dynamic_gap, center_y, center_x + length, center_y, r, g, b, dynamic_alpha)
+            renderer.line(center_x, center_y - length, center_x, center_y - dynamic_gap, r, g, b, dynamic_alpha)
+            renderer.line(center_x, center_y + dynamic_gap, center_x, center_y + length, r, g, b, dynamic_alpha)
+
+            -- Add pulse effect
+            local pulse = math.sin(globals.realtime() * 3) * 0.5 + 0.5
+            renderer.circle_outline(center_x, center_y, r, g, b, 50 + 50 * pulse, dynamic_gap, 0, 1, 1)
+            end
+    end
+end
+
+-- [ Watermark ]
+local watermark_render = function()
+    if not _ui.visual.watermark.value or not _ui.lua.enable.value then
+        return
+    end
+
+    local screen_w, screen_h = client.screen_size()
+    local r, g, b = _ui.visual.color.r, _ui.visual.color.g, _ui.visual.color.b
+
+    -- Использование RGB, если включено
+    if _ui.visual.enable_rgb.value then
+        r, g, b = get_rgb(_ui.visual.rgb_speed.value, 0)
+    end
+
+    local latency = math.floor(client.latency() * 1000)
+    local fps = math.floor(1 / globals.frametime())
+
+    -- Получаем время через globals.realtime()
+    local total_seconds = math.floor(globals.realtime())
+    local hours = math.floor(total_seconds / 3600) % 24
+    local minutes = math.floor(total_seconds / 60) % 60
+    local seconds = total_seconds % 60
+
+    local time_str = string.format("%02d:%02d:%02d", hours, minutes, seconds)
+    local style = _ui.visual.watermark_style.value
+
+    if style == "Classic" then
+        local text = string.format("nebula | %dms | %dfps | %s", latency, fps, time_str)
+        local text_w, text_h = renderer.measure_text("", text)
+
+        -- Draw background
+        renderer.rectangle(screen_w - text_w - 20, 5, text_w + 15, text_h + 10, 20, 20, 20, 150)
+        renderer.gradient(screen_w - text_w - 20, 5, text_w + 15, 2, r, g, b, 255, r, g, b, 50, true)
+
+        -- Draw text
+        renderer.text(screen_w - text_w - 12, 10 + text_h / 2, 255, 255, 255, 255, "", 0, text)
+    elseif style == "Modern" then
+        local text = string.format("NEBULA | %dms | %dfps | %s", latency, fps, time_str)
+        local text_w, text_h = renderer.measure_text("b", text)
+
+        -- Полукруглый дизайн
+        local width = text_w + 25
+        local height = 26
+        local x = screen_w - width - 10
+        local y = 8
+
+        -- Фон с закругленными краями (имитация с помощью прямоугольников и градиентов)
+        renderer.rectangle(x + 5, y, width - 10, height, 15, 15, 15, 200)
+        renderer.rectangle(x, y + 5, 5, height - 10, 15, 15, 15, 200)
+        renderer.rectangle(x + width - 5, y + 5, 5, height - 10, 15, 15, 15, 200)
+
+        -- Верхний акцентный градиент
+        renderer.gradient(x + 5, y, width - 10, 2, r, g, b, 255, r * 0.7, g * 0.7, b * 0.7, 200, true)
+
+        -- Иконки и текст
+        local icon_offset = 0
+        for i = 1, 4 do
+            local segment_r = r
+            local segment_g = g
+            local segment_b = b
+
+            if _ui.visual.enable_rgb.value then
+                segment_r, segment_g, segment_b = get_rgb(_ui.visual.rgb_speed.value, i * 0.5)
+            end
+
+            renderer.rectangle(x + 10 + icon_offset, y + height - 6, 3, 3, segment_r, segment_g, segment_b, 255)
+            icon_offset = icon_offset + 6
+        end
+
+        renderer.text(x + width/2, y + height/2, 255, 255, 255, 255, "cb", 0, text)
+    elseif style == "Animated" then
+        local text = string.format("NEBULA | %dms | %dfps | %s", latency, fps, time_str)
+        local text_w, text_h = renderer.measure_text("b", text)
+
+        -- Анимированный дизайн
+        local width = text_w + 30
+        local height = 26
+        local x = screen_w - width - 10
+        local y = 8
+
+        -- Волнистый фон
+        renderer.rectangle(x, y, width, height, 15, 15, 15, 200)
+
+        -- Анимированная линия
+        local line_pos = (globals.realtime() * 100) % (width * 2)
+
+        -- Градиент для плавного появления и исчезновения
+        if line_pos < width then
+            local alpha_multiplier = math.sin(line_pos / width * math.pi)
+            renderer.gradient(
+                x + line_pos - 10, y,
+                20, height,
+                r * 0.2, g * 0.2, b * 0.2, 0,
+                r, g, b, 100 * alpha_multiplier,
+                false
+            )
+        end
+
+        -- Пульсирующий акцент
+        local pulse = math.sin(globals.realtime() * 2) * 0.3 + 0.7
+        renderer.rectangle(x, y, width, 2, r, g, b, 255 * pulse)
+
+        -- Текст с мерцающим эффектом
+        local text_alpha = math.floor(math.sin(globals.realtime() * 4) * 20 + 235)
+        renderer.text(x + width/2, y + height/2, 255, 255, 255, text_alpha, "cb", 0, text)
+
+        -- Декоративные элементы
+        for i = 1, 5 do
+            local dot_x = x + (width * i / 6)
+            local dot_y = y + height - 5
+            local dot_size = math.sin(globals.realtime() * 3 + i) * 1 + 2
+
+            local dot_r, dot_g, dot_b = r, g, b
+            if _ui.visual.enable_rgb.value then
+                dot_r, dot_g, dot_b = get_rgb(_ui.visual.rgb_speed.value, i * 0.5)
+            end
+
+            renderer.circle(dot_x, dot_y, dot_r, dot_g, dot_b, 200, dot_size, 0, 1)
+        end
+    elseif style == "Minimal" then
+        -- Минималистичный дизайн
+        local time_only = string.format("%02d:%02d", hours, minutes)
+        local text_w, text_h = renderer.measure_text("", time_only)
+
+        -- Простая иконка с временем
+        renderer.circle_outline(screen_w - 40, 20, r, g, b, 255, 10, 0, 0.75, 1)
+        renderer.rectangle(screen_w - 40, 10, 1, 3, r, g, b, 255) -- Маленькая стрелка часов
+
+        -- Линия для индикации FPS и пинга
+        local ping_ratio = math.min(latency / 200, 1)
+        local fps_ratio = math.min(math.max(30, fps) / 200, 1)
+
+        -- FPS линия (зеленая - хороший FPS)
+        renderer.rectangle(screen_w - 55, 35, 30 * fps_ratio, 2,
+            100 + (1-fps_ratio) * 155,
+            100 + fps_ratio * 155,
+            100,
+            200)
+
+        -- Ping линия (красная - высокий пинг)
+        renderer.rectangle(screen_w - 55, 38, 30 * ping_ratio, 2,
+            100 + ping_ratio * 155,
+            100 + (1-ping_ratio) * 155,
+            100,
+            200)
+
+        -- Маленький ватермарк
+        renderer.text(screen_w - 40, 52, r, g, b, 255, "c", 0, "nebula")
+    end
+end
+
+-- [ Hit Log ]
+local hitlog = {
+    logs = {},
+    last_shot = 0
+}
+
+-- Add a hit log
+hitlog.add = function(target, hitgroup, damage)
+    local current_time = globals.realtime()
+    local new_log = {
+        name = entity.get_player_name(target),
+        hitgroup = hitgroup,
+        damage = damage,
+        time = current_time,
+        alpha = 255,
+        y_offset = 0
+    }
+
+    table.insert(hitlog.logs, new_log)
+
+    -- Output to chat if enabled
+    if _ui.visual.log_style.value == "Chat" or _ui.visual.log_style.value == "Both" then
+        local hitbox_names = {
+            [0] = "generic",
+            [1] = "head",
+            [2] = "chest",
+            [3] = "stomach",
+            [4] = "left arm",
+            [5] = "right arm",
+            [6] = "left leg",
+            [7] = "right leg",
+            [8] = "neck",
+            [9] = "gear"
+        }
+
+        client.color_log(85, 165, 245, "[NEBULA] ", 255, 255, 255, string.format("Hit %s in the %s for %d damage", new_log.name, hitbox_names[hitgroup] or "body", damage))
+    end
+end
+
+-- Render hit logs on screen
+hitlog.render = function()
+    if not _ui.visual.logs.value or not _ui.lua.enable.value or _ui.visual.log_style.value == "Chat" then
+        return
+    end
+
+    local current_time = globals.realtime()
+    local screen_w, screen_h = client.screen_size()
+    local r, g, b = _ui.visual.color.r, _ui.visual.color.g, _ui.visual.color.b
+
+    -- Использование RGB, если включено
+    if _ui.visual.enable_rgb.value then
+        r, g, b = get_rgb(_ui.visual.rgb_speed.value, 0)
+    end
+
+    -- Update animations and remove old logs
+    for i = #hitlog.logs, 1, -1 do
+        local log = hitlog.logs[i]
+        local age = current_time - log.time
+
+        if age > 5 then
+            table.remove(hitlog.logs, i)
+        else
+            if age < 0.5 then
+                log.y_offset = math.floor(easing.outCubic(age, 0, 20, 0.5))
+            elseif age > 4.5 then
+                log.alpha = math.floor(255 * (1 - (age - 4.5) / 0.5))
+                log.y_offset = math.floor(20 + easing.inCubic(age - 4.5, 0, 20, 0.5))
+            else
+                log.y_offset = 20
+            end
+        end
+    end
+
+    -- Draw logs
+    local y_position = screen_h - 200
+    for i, log in ipairs(hitlog.logs) do
+        local text = string.format("Hit %s in the %s for %d damage", log.name, tostring(log.hitgroup), log.damage)
+        local text_w, text_h = renderer.measure_text("", text)
+
+        -- Draw background
+        renderer.rectangle(screen_w / 2 - text_w / 2 - 10, y_position + (i-1) * 25 - log.y_offset, text_w + 20, text_h + 10, 20, 20, 20, log.alpha * 0.6)
+        renderer.gradient(screen_w / 2 - text_w / 2 - 10, y_position + (i-1) * 25 - log.y_offset, text_w + 20, 2, r, g, b, log.alpha, 150, 150, 150, 0, true)
+
+        -- Draw text
+        renderer.text(screen_w / 2, y_position + 5 + (i-1) * 25 - log.y_offset + text_h / 2, 255, 255, 255, log.alpha, "c", 0, text)
+    end
+end
+
+-- Track shot information for later hit logging
+client.set_event_callback("aim_fire", function(e)
+    hitlog.last_shot = {
+        target = e.target,
+        tick = globals.tickcount()
+    }
+end)
+
+-- Register hits
+client.set_event_callback("player_hurt", function(e)
+    local attacker = client.userid_to_entindex(e.attacker)
+    local victim = client.userid_to_entindex(e.userid)
+
+    if attacker == entity.get_local_player() and hitlog.last_shot and hitlog.last_shot.target == victim then
+        hitlog.add(victim, e.hitgroup, e.dmg_health)
+    end
+end)
+
+-- [ Custom clantag ]
+local clantag_animation = {
+    "N", "Ne", "Neb", "Nebu", "Nebul", "Nebula", "Nebula ", "Nebula", "Nebul", "Nebu", "Neb", "Ne", "N", ""
+}
+
+local pulse_animation = {
+    "N", "N", "Ne", "Ne", "Neb", "Neb", "Nebu", "Nebu", "Nebul", "Nebul", "Nebula", "Nebula", "Nebula", "Nebula", "Nebula", "Nebula", "Nebula ", "Nebula ", "Nebula", "Nebula", "Nebul", "Nebul", "Nebu", "Nebu", "Neb", "Neb", "Ne", "Ne", "N", "N", "", ""
+}
+
+local wave_animation = function(time)
+    local wave_text = "Nebula"
+    local result = ""
+    local wave_speed = 2.5
+    local wave_height = 3
+
+    for i = 1, #wave_text do
+        local char = wave_text:sub(i, i)
+        local offset = math.sin((time * wave_speed) + (i * 0.5)) * wave_height
+
+        -- Add spaces based on the wave offset
+        if offset > 0 then
+            result = result .. string.rep(" ", math.floor(offset)) .. char
+        else
+            result = result .. char .. string.rep(" ", math.floor(math.abs(offset)))
+        end
+    end
+
+    return result
+end
+
+local clantag_static = "Nebula"
+local old_tag = ""
+local tag_set = false
+
+local function set_clantag(tag)
+    if tag == old_tag then
+        return
+    end
+
+    client.set_clan_tag(tag)
+    old_tag = tag
+    tag_set = true
+end
+
+local clantag_update = function()
+    if not _ui.misc.clan_tag.value or not _ui.lua.enable.value then
+        if tag_set then
+            client.set_clan_tag("")
+            tag_set = false
+        end
+        return
+    end
+
+    local style = _ui.misc.tag_style.value
+    local time = math.floor(globals.curtime() * 3) % 3
+
+    if style == "Static" then
+        set_clantag(clantag_static)
+    elseif style == "Animated" then
+        -- Animated
+        local time = math.floor(globals.curtime() * 2.3) % #clantag_animation + 1
+        set_clantag(clantag_animation[time])
+    elseif style == "Pulse" then
+        -- Pulsing animation
+        local time = math.floor(globals.curtime() * 3.5) % #pulse_animation + 1
+        set_clantag(pulse_animation[time])
+    elseif style == "Wave" then
+        -- Wave animation
+        set_clantag(wave_animation(globals.curtime()))
+    end
+end
+
+-- [ Custom hitsound ]
+client.set_event_callback("player_hurt", function(e)
+    if not _ui.misc.custom_hitsound.value or not _ui.lua.enable.value then
+        return
+    end
+
+    local attacker = client.userid_to_entindex(e.attacker)
+    if attacker == entity.get_local_player() then
+        local volume = _ui.misc.hitsound_volume.value / 100
+        client.exec(string.format("playvol buttons\\arena_switch_press_02.wav %.1f", volume))
+    end
+end)
+
+-- [ Updating Main Tab Info ]
+local function update_main_info()
+    if not _ui.lua.enable.value or _ui.lua.tab.value ~= "Main" then
+        return
+    end
+
+    local current_state = get_state(get_velocity())
+    local state_name = aa_state_full[current_state] or "Unknown"
+
+    -- Безопасное получение значений цвета
+    local color_r = _ui.visual.color.r or 85
+    local color_g = _ui.visual.color.g or 165
+    local color_b = _ui.visual.color.b or 245
+
+    _ui.main.current_state:set("\aFFFFFFFFCurrent state: \a" ..
+        (_ui.visual.enable_rgb.value and
+        string.format("\a%02X%02X%02XFF", get_rgb(_ui.visual.rgb_speed.value, 0)) or
+        string.format("\a%02X%02X%02XFF", color_r, color_g, color_b)) ..
+        state_name)
+
+    local dt_active = ui.get(ref.doubletap[2])
+    _ui.main.dt_state:set("\aFFFFFFFFDouble-tap: " ..
+        (dt_active and "\a00FF00FFActive" or "\aFF0000FFInactive"))
+
+    local hs_active = ui.get(ref.quick_peek[2])
+    _ui.main.hs_state:set("\aFFFFFFFFOn-shot: " ..
+        (hs_active and "\a00FF00FFActive" or "\aFF0000FFInactive"))
+
+    local defensive_active = is_defensive_active()
+    _ui.main.defense_state:set("\aFFFFFFFFDefensive AA: " ..
+        (defensive_active and "\aFF9900FFActive" or "\aFF0000FFInactive"))
+end
+
+-- [ Callbacks ]
+client.set_event_callback("paint", function()
+    indicators.render()
+    manual_arrows.render()
+    scope_render()
+    watermark_render()
+    hitlog.render()
+    hotbar.render()
+    render_spectators()
+    render_keybinds()
+    update_main_info()
+end)
+
+client.set_event_callback("paint_ui", function()
+    if ui.is_menu_open() then
+        hide_refs(_ui.lua.enable.value)
+        ui.set_visible(aa_builder[1].override.ref, false)
+        ui.set(aa_builder[1].override.ref, true)
+    end
+end)
+
+client.set_event_callback("setup_command", function(cmd)
+    antiaim_features(cmd)
+    auto_discharge(cmd)
+end)
+
+client.set_event_callback("run_command", function()
+    clantag_update()
+    setup_console_filter()
+end)
+
+client.set_event_callback("net_update_end", function()
+    update_spectators()
+    update_keybinds()
+end)
+
+client.set_event_callback("shutdown", function()
+    hide_refs(false)
+    if tag_set then
+        client.set_clan_tag("")
+    end
+    -- Reset scope blend
+    cvar.cl_drawhud_force_deathnotices:set_int(0)
+    cvar.cl_drawhud_force_radar:set_int(0)
+end)
+
+-- Display welcome message
+client.color_log(85, 165, 245, "==============================================")
+client.color_log(85, 165, 245, "            Nebula Lua v" .. script_info.version .. " loaded            ")
+client.color_log(85, 165, 245, "==============================================")
+client.color_log(255, 255, 255, "Features:")
+client.color_log(255, 255, 255, "- State-based anti-aim system")
+client.color_log(255, 255, 255, "- Advanced defensive anti-aim settings")
+client.color_log(255, 255, 255, "- Automatic discharge exploit")
+client.color_log(255, 255, 255, "- Full configuration system")
+client.color_log(255, 255, 255, "- Enhanced visuals & animations")
+client.color_log(255, 255, 255, "- Manual AA direction control")
+client.color_log(255, 255, 255, "- Custom hotbar for active features")
+client.color_log(255, 255, 255, "- Sleek visualization design")
+client.color_log(255, 255, 255, "- RGB menu enhancements")
+client.color_log(255, 255, 255, "- Informative main tab")
+client.color_log(85, 165, 245, "==============================================")
