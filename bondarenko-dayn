@@ -1,4 +1,4 @@
--- MainScript.lua (Оптимизирован для обновленной библиотеки)
+-- MainScript.lua (Исправленная версия с улучшенной загрузкой библиотеки)
 
 -- Основные сервисы Roblox
 local Players = game:GetService("Players")
@@ -10,23 +10,23 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
--- Загрузка библиотеки
+-- Загрузка библиотеки с проверками
 local Lib
 local function loadLibrary()
     local success, result = pcall(function()
         return loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
     end)
-    if success and result then
+    if success and result and type(result) == "table" and result.Menu then
         return result
     else
-        warn("Ошибка загрузки библиотеки: " .. tostring(result))
+        warn("Ошибка загрузки библиотеки: " .. tostring(result or "Нет данных"))
         return nil
     end
 end
 
 Lib = loadLibrary()
-if not Lib then
-    warn("Не удалось загрузить библиотеку после попыток")
+if not Lib or not Lib.Menu then
+    warn("Библиотека не загружена или не содержит метод Menu. Скрипт остановлен.")
     return
 end
 
