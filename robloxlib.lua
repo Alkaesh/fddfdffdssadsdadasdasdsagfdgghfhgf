@@ -606,36 +606,40 @@ function Lib.Menu:AddColorPicker(tab, name, defaultColor, callback)
         callback(color)
     end
 
-    local isPicking = false
+    local isPickingHue = false
+    local isPickingSquare = false
+
     colorButton.MouseButton1Click:Connect(function()
         colorPanel.Visible = not colorPanel.Visible
     end)
 
     hueBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isPicking = true
+            isPickingHue = true
         end
     end)
+
     colorSquare.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isPicking = true
+            isPickingSquare = true
         end
     end)
 
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isPicking = false
+            isPickingHue = false
+            isPickingSquare = false
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if isPicking and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
             local mousePos = UserInputService:GetMouseLocation()
-            if hueBar:IsAncestorOf(input.UserInputState) or hueBar.AbsolutePosition.Y <= mousePos.Y then
+            if isPickingHue then
                 local hueFraction = math.clamp((mousePos.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
                 hueSlider.Position = UDim2.new(0, 0, hueFraction, 0)
                 updateColor(hueFraction, 1, 1)
-            elseif colorSquare:IsAncestorOf(input.UserInputState) then
+            elseif isPickingSquare then
                 local squarePos = mousePos - colorSquare.AbsolutePosition
                 local sat = math.clamp(squarePos.X / colorSquare.AbsoluteSize.X, 0, 1)
                 local val = math.clamp(1 - (squarePos.Y / colorSquare.AbsoluteSize.Y), 0, 1)
@@ -650,6 +654,11 @@ end
 
 -- Улучшенная функция уведомлений
 function Lib.Menu:Notify(message, duration)
+    if not screenGui then
+        warn("ScreenGui не инициализирован для уведомлений")
+        return
+    end
+
     local notificationFrame = Instance.new("Frame")
     notificationFrame.Size = UDim2.new(0, 300, 0, 80)
     notificationFrame.Position = UDim2.new(1, -310, 1, -90)
