@@ -1,15 +1,6 @@
 -- MainScript.lua
 
--- Основные сервисы
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-
--- Подгрузка библиотеки
+-- Подгрузка библиотеки по ссылке
 local Lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
 
 -- Подгрузка ESP-модуля
@@ -34,72 +25,42 @@ else
     Lib.Menu:Notify("Fly module loaded successfully!", 3)
 end
 
--- Создаем меню с улучшенным дизайном
-local menu = Lib.Menu:CreateMenu("Za Xoxlov", {
-    Theme = "Dark", -- Поддержка тем (Dark/Light)
-    ZIndex = 9999, -- Высокий приоритет для предотвращения конфликтов
-    BackgroundGradient = {Color3.fromRGB(20, 20, 30), Color3.fromRGB(40, 40, 60)}, -- Градиент фона
-    CornerRadius = UDim.new(0, 10), -- Закругленные углы
-    ShadowEnabled = true -- Тень для меню
-})
+-- Основные сервисы
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
--- Функция для RGB-анимации
-local function updateRGB(element)
-    spawn(function()
-        while true do
-            for hue = 0, 1, 0.01 do
-                local color = Color3.fromHSV(hue, 1, 1)
-                if element:IsA("GuiObject") then
-                    element.BackgroundColor3 = color
-                end
-                wait(0.05)
-            end
-        end
-    end)
-end
-
--- Анимация открытия/закрытия меню
-local function animateMenu(state)
-    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-    local goal = state and {Position = UDim2.new(0.5, 0, 0.5, 0), Transparency = 0} or {Position = UDim2.new(0.5, 0, 0.4, 0), Transparency = 1}
-    local tween = TweenService:Create(menu, tweenInfo, goal)
-    tween:Play()
-    menu.Visible = state
-end
+-- Создаем меню
+local menu = Lib.Menu:CreateMenu("Za Xoxlov")
 
 -- Вкладки
-local mainTab = Lib.Menu:AddTab(menu, "Main", {RGBBorder = true}) -- Добавляем RGB-обводку
+local mainTab = Lib.Menu:AddTab(menu, "Main")
 local teleportTab = Lib.Menu:AddTab(menu, "Teleport")
-local espTab = ESP and Lib.Menu:AddTab(menu, "ESP")
-local settingsTab = Lib.Menu:AddTab(menu, "Settings") -- Новая вкладка для настроек
+local espTab = ESP and Lib.Menu:AddTab(menu, "ESP") -- Создаем вкладку ESP только если модуль загрузился
 
 -- Переменные для функционала
 local speedEnabled = false
 local jumpEnabled = false
-local sliderSpeed = 16
-local sliderJumpPower = 50
-local currentSpeed = 16
-local currentJumpPower = 50
-local defaultSpeed = 16
-local defaultJumpPower = 50
+local sliderSpeed = 16 -- Значение слайдера для скорости
+local sliderJumpPower = 50 -- Значение слайдера для прыжка
+local currentSpeed = 16 -- Текущее применяемое значение скорости
+local currentJumpPower = 50 -- Текущее применяемое значение прыжка
+local defaultSpeed = 16 -- Дефолтное значение скорости (зависит от сервера)
+local defaultJumpPower = 50 -- Дефолтное значение прыжка (зависит от сервера)
 local teleportOnClickEnabled = false
-local teleportKey = Enum.KeyCode.LeftControl
+local teleportKey = Enum.KeyCode.LeftControl -- Клавиша для телепорта по клику
 local isNoclipEnabled = false
-local noclipConnection
+local noclipConnection -- Для хранения соединения RunService.Stepped
 local antiAfkEnabled = false
-local infiniteJumpEnabled = false
-local particlesEnabled = false
-local particleEmitter = nil
-local particleColor = Color3.fromRGB(255, 0, 0)
-local particleRate = 50
-local isMenuMinimized = false
-local currentTheme = "Dark"
 
--- Переменные для уведомлений
+-- Переменные для управления уведомлениями (debounce)
 local lastNotificationTime = 0
-local notificationCooldown = 1
+local notificationCooldown = 1 -- Задержка между уведомлениями (в секундах)
 
--- Функция для уведомлений с задержкой
+-- Функция для показа уведомлений с задержкой
 local function notifyWithCooldown(message, duration)
     local currentTime = tick()
     if currentTime - lastNotificationTime >= notificationCooldown then
@@ -113,7 +74,7 @@ local function getCharacter(player)
     return player.Character
 end
 
--- Сохранение начальных значений скорости и прыжка
+-- Сохраняем начальные значения скорости и прыжка
 local function updateDefaultValues()
     local character = getCharacter(LocalPlayer)
     if character then
@@ -132,9 +93,11 @@ local function updateDefaultValues()
         end
     end
 end
+
+-- Вызываем при загрузке скрипта
 updateDefaultValues()
 
--- Обновление значений при респавне
+-- Обновляем начальные значения при респавне
 LocalPlayer.CharacterAdded:Connect(function(character)
     updateDefaultValues()
     local humanoid = character:WaitForChild("Humanoid")
@@ -152,54 +115,57 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     else
         humanoid.JumpPower = defaultJumpPower
     end
-    if particlesEnabled then
-        wait(0.1)
-        toggleParticles(false)
-        toggleParticles(true)
-    end
 end)
 
--- Постоянное обновление скорости и прыжка (оптимизировано)
+-- Постоянное обновление скорости и прыжка
 RunService.RenderStepped:Connect(function()
     local character = getCharacter(LocalPlayer)
     if character then
         local humanoid = character:FindFirstChild("Humanoid")
         if humanoid then
-            if speedEnabled and humanoid.WalkSpeed ~= currentSpeed then
-                humanoid.WalkSpeed = currentSpeed
-            elseif not speedEnabled and humanoid.WalkSpeed ~= defaultSpeed then
-                humanoid.WalkSpeed = defaultSpeed
+            if speedEnabled then
+                if humanoid.WalkSpeed ~= currentSpeed then
+                    humanoid.WalkSpeed = currentSpeed
+                end
+            else
+                if humanoid.WalkSpeed ~= defaultSpeed then
+                    humanoid.WalkSpeed = defaultSpeed
+                end
             end
-            if jumpEnabled and humanoid.JumpPower ~= currentJumpPower then
-                humanoid.JumpPower = currentJumpPower
-            elseif not jumpEnabled and humanoid.JumpPower ~= defaultJumpPower then
-                humanoid.JumpPower = defaultJumpPower
+            if jumpEnabled then
+                if humanoid.JumpPower ~= currentJumpPower then
+                    humanoid.JumpPower = currentJumpPower
+                end
+            else
+                if humanoid.JumpPower ~= defaultJumpPower then
+                    humanoid.JumpPower = defaultJumpPower
+                end
             end
         end
     end
 end)
 
--- Функция для Anti-AFK (переписана с Heartbeat)
-local antiAfkConnection
+
+-- Функция для Anti-AFK
 local function toggleAntiAfk(state)
     antiAfkEnabled = state
     if antiAfkEnabled then
-        antiAfkConnection = RunService.Heartbeat:Connect(function()
-            local character = getCharacter(LocalPlayer)
-            if character then
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                if rootPart then
-                    rootPart.CFrame = rootPart.CFrame + Vector3.new(0.1, 0, 0)
-                    wait(0.1)
-                    rootPart.CFrame = rootPart.CFrame - Vector3.new(0.1, 0, 0)
+        spawn(function()
+            while antiAfkEnabled do
+                local character = getCharacter(LocalPlayer)
+                if character then
+                    local rootPart = character:FindFirstChild("HumanoidRootPart")
+                    if rootPart then
+                        rootPart.CFrame = rootPart.CFrame + Vector3.new(0.1, 0, 0)
+                        wait(0.1)
+                        rootPart.CFrame = rootPart.CFrame - Vector3.new(0.1, 0, 0)
+                    end
                 end
+                wait(10)
             end
         end)
         notifyWithCooldown("Anti-AFK Enabled", 3)
     else
-        if antiAfkConnection then
-            antiAfkConnection:Disconnect()
-        end
         notifyWithCooldown("Anti-AFK Disabled", 3)
     end
 end
@@ -242,20 +208,23 @@ local function toggleNoclip(state)
     end
 end
 
--- Функция для телепортации к игроку
+-- Функция для телепортации к игроку с частичным совпадением ника
 local function teleportToPlayer(partialName)
     if not partialName or partialName == "" then
         notifyWithCooldown("Please enter a player name!", 3)
         return
     end
+
     partialName = partialName:lower()
     local matchingPlayers = {}
+
     for _, player in pairs(Players:GetPlayers()) do
         local playerNameLower = player.Name:lower()
         if playerNameLower:sub(1, #partialName) == partialName then
             table.insert(matchingPlayers, player)
         end
     end
+
     if #matchingPlayers == 0 then
         notifyWithCooldown("No players found with name starting with: " .. partialName, 3)
     elseif #matchingPlayers == 1 then
@@ -293,11 +262,13 @@ local function teleportToClickPosition()
         notifyWithCooldown("Could not teleport: Character not found", 3)
         return
     end
+
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then
         notifyWithCooldown("Could not teleport: No HumanoidRootPart found", 3)
         return
     end
+
     local mouseHit = Mouse.Hit
     if mouseHit then
         local wasNoclipEnabled = isNoclipEnabled
@@ -314,6 +285,7 @@ end
 -- Обработка клика для телепортации
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then return end
+
     if teleportOnClickEnabled and input.UserInputType == Enum.UserInputType.MouseButton1 then
         if UserInputService:IsKeyDown(teleportKey) then
             teleportToClickPosition()
@@ -321,96 +293,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     end
 end)
 
--- Функция для Infinite Jump
-local function toggleInfiniteJump(state)
-    infiniteJumpEnabled = state
-    if infiniteJumpEnabled then
-        local jumpConnection
-        jumpConnection = UserInputService.JumpRequest:Connect(function()
-            if infiniteJumpEnabled then
-                local character = getCharacter(LocalPlayer)
-                if character then
-                    local humanoid = character:FindFirstChild("Humanoid")
-                    if humanoid then
-                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                end
-            else
-                jumpConnection:Disconnect()
-            end
-        end)
-        notifyWithCooldown("Infinite Jump Enabled", 3)
-    else
-        notifyWithCooldown("Infinite Jump Disabled", 3)
-    end
-end
-
--- Функция для частиц
-local function toggleParticles(state)
-    particlesEnabled = state
-    local character = getCharacter(LocalPlayer)
-    if particlesEnabled then
-        if character then
-            local rootPart = character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                particleEmitter = Instance.new("ParticleEmitter")
-                particleEmitter.Texture = "rbxassetid://243098098"
-                particleEmitter.Size = NumberSequence.new(0.5)
-                particleEmitter.Transparency = NumberSequence.new(0, 1)
-                particleEmitter.Lifetime = NumberRange.new(1, 2)
-                particleEmitter.Rate = particleRate
-                particleEmitter.Speed = NumberRange.new(5, 10)
-                particleEmitter.SpreadAngle = Vector2.new(360, 360)
-                particleEmitter.Color = ColorSequence.new(particleColor)
-                particleEmitter.Parent = rootPart
-                notifyWithCooldown("Particle Effect Enabled", 3)
-            else
-                notifyWithCooldown("Cannot enable particles: No HumanoidRootPart found", 3)
-                particlesEnabled = false
-            end
-        else
-            notifyWithCooldown("Cannot enable particles: Character not found", 3)
-            particlesEnabled = false
-        end
-    else
-        if particleEmitter then
-            particleEmitter:Destroy()
-            particleEmitter = nil
-        end
-        notifyWithCooldown("Particle Effect Disabled", 3)
-    end
-end
-
--- Сохранение настроек
-local function saveSettings()
-    local settings = {
-        speedEnabled = speedEnabled,
-        sliderSpeed = sliderSpeed,
-        jumpEnabled = jumpEnabled,
-        sliderJumpPower = sliderJumpPower,
-        currentTheme = currentTheme
-    }
-    pcall(function()
-        writefile("cheat_settings.json", game:GetService("HttpService"):JSONEncode(settings))
-    end)
-end
-
-local function loadSettings()
-    pcall(function()
-        if isfile("cheat_settings.json") then
-            local settings = game:GetService("HttpService"):JSONDecode(readfile("cheat_settings.json"))
-            speedEnabled = settings.speedEnabled
-            sliderSpeed = settings.sliderSpeed
-            jumpEnabled = settings.jumpEnabled
-            sliderJumpPower = settings.sliderJumpPower
-            currentTheme = settings.currentTheme or "Dark"
-            Lib.Menu:SetTheme(menu, currentTheme)
-        end
-    end)
-end
-loadSettings()
-
 -- === Вкладка Main ===
+-- Секция: Speed and Jump
 Lib.Menu:AddSection(mainTab, "Speed and Jump")
 Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
     speedEnabled = state
@@ -439,8 +323,7 @@ Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
             end
         end
     end
-    saveSettings()
-end, {HoverAnimation = true}) -- Анимация наведения
+end)
 Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, defaultSpeed, function(value)
     sliderSpeed = value
     if speedEnabled then
@@ -460,8 +343,7 @@ Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, defaultSpeed, function(value)
     else
         notifyWithCooldown("Enable Speedhack to apply speed", 3)
     end
-    saveSettings()
-end, {RGBTrack = true}) -- RGB-ползунок
+end)
 Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
     jumpEnabled = state
     if state then
@@ -489,8 +371,7 @@ Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
             end
         end
     end
-    saveSettings()
-end, {HoverAnimation = true})
+end)
 Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, defaultJumpPower, function(value)
     sliderJumpPower = value
     if jumpEnabled then
@@ -510,10 +391,37 @@ Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, defaultJumpPower, function(va
     else
         notifyWithCooldown("Enable Jump Power to apply jump power", 3)
     end
-    saveSettings()
-end, {RGBTrack = true})
-Lib.Menu:AddToggle(mainTab, "Enable Infinite Jump", false, toggleInfiniteJump, {HoverAnimation = true})
+end)
 
+-- Переменные для Infinite Jump
+local infiniteJumpEnabled = false
+
+-- Функция для Infinite Jump
+local function toggleInfiniteJump(state)
+    infiniteJumpEnabled = state
+    if infiniteJumpEnabled then
+        UserInputService.JumpRequest:Connect(function()
+            if infiniteJumpEnabled then
+                local character = getCharacter(LocalPlayer)
+                if character then
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    if humanoid then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                end
+            end
+        end)
+        notifyWithCooldown("Infinite Jump Enabled", 3)
+    else
+        notifyWithCooldown("Infinite Jump Disabled", 3)
+    end
+end
+
+
+Lib.Menu:AddToggle(mainTab, "Enable Infinite Jump", false, toggleInfiniteJump)
+
+
+-- Секция: Fly (если модуль доступен)
 if Fly then
     Lib.Menu:AddSection(mainTab, "Fly Settings")
     Lib.Menu:AddToggle(mainTab, "Enable Fly", false, function(state)
@@ -523,45 +431,36 @@ if Fly then
         else
             notifyWithCooldown("Fly Error: " .. message, 3)
         end
-    end, {HoverAnimation = true})
+    end)
     Lib.Menu:AddSlider(mainTab, "Fly Speed", 50, 200, 50, function(value)
         Fly.flySpeed = value
         notifyWithCooldown("Fly Speed set to: " .. value, 3)
-    end, {RGBTrack = true})
+    end)
 end
 
+-- Секция: Other Movement
 Lib.Menu:AddSection(mainTab, "Other Movement")
-Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip, {HoverAnimation = true})
+Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip)
 
+
+
+
+
+-- Секция: Utility
 Lib.Menu:AddSection(mainTab, "Utility")
-Lib.Menu:AddToggle(mainTab, "Enable Anti-AFK", false, toggleAntiAfk, {HoverAnimation = true})
-
-Lib.Menu:AddSection(mainTab, "Visual Effects")
-Lib.Menu:AddToggle(mainTab, "Enable Particles", false, toggleParticles, {HoverAnimation = true})
-Lib.Menu:AddSlider(mainTab, "Particle Rate", 10, 100, 50, function(value)
-    particleRate = value
-    if particleEmitter then
-        particleEmitter.Rate = particleRate
-    end
-    notifyWithCooldown("Particle Rate set to: " .. value, 3)
-end, {RGBTrack = true})
-Lib.Menu:AddColorPicker(mainTab, "Particle Color", particleColor, function(color)
-    particleColor = color
-    if particleEmitter then
-        particleEmitter.Color = ColorSequence.new(particleColor)
-    end
-    notifyWithCooldown("Particle Color updated", 3)
-end, {RGBAnimation = true})
+Lib.Menu:AddToggle(mainTab, "Enable Anti-AFK", false, toggleAntiAfk)
 
 -- === Вкладка Teleport ===
+-- Секция: Teleport to Player
 Lib.Menu:AddSection(teleportTab, "Teleport to Player")
 local teleportTextBox = Lib.Menu:AddTextBox(teleportTab, "Player Name (First Letters)", "", function(playerName)
     teleportToPlayer(playerName)
-end, {HoverAnimation = true})
+end)
 Lib.Menu:AddButton(teleportTab, "Teleport to Player", function()
     teleportToPlayer(teleportTextBox.Text)
-end, {HoverAnimation = true})
+end)
 
+-- Секция: Teleport on Click
 Lib.Menu:AddSection(teleportTab, "Teleport on Click")
 Lib.Menu:AddToggle(teleportTab, "Enable Teleport on Click", false, function(state)
     teleportOnClickEnabled = state
@@ -570,7 +469,7 @@ Lib.Menu:AddToggle(teleportTab, "Enable Teleport on Click", false, function(stat
     else
         notifyWithCooldown("Teleport on Click Disabled", 3)
     end
-end, {HoverAnimation = true})
+end)
 Lib.Menu:AddDropdown(teleportTab, "Teleport Key", {"LeftControl", "LeftAlt", "LeftShift"}, "LeftControl", function(key)
     if key == "LeftControl" then
         teleportKey = Enum.KeyCode.LeftControl
@@ -582,128 +481,198 @@ Lib.Menu:AddDropdown(teleportTab, "Teleport Key", {"LeftControl", "LeftAlt", "Le
     if teleportOnClickEnabled then
         notifyWithCooldown("Teleport Key changed to: " .. key, 3)
     end
-end, {HoverAnimation = true})
+end)
 
--- === Вкладка ESP ===
+-- Переменные для частиц
+local particlesEnabled = false
+local particleEmitter = nil
+local particleColor = Color3.fromRGB(255, 0, 0) -- Цвет частиц по умолчанию (красный)
+local particleRate = 50 -- Скорость появления частиц
+
+-- Функция для создания и управления частицами
+local function toggleParticles(state)
+    particlesEnabled = state
+    local character = getCharacter(LocalPlayer)
+    
+    if particlesEnabled then
+        if character then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                -- Создаем ParticleEmitter
+                particleEmitter = Instance.new("ParticleEmitter")
+                particleEmitter.Texture = "rbxassetid://243098098" -- Текстура искр (можно заменить)
+                particleEmitter.Size = NumberSequence.new(0.5) -- Размер частиц
+                particleEmitter.Transparency = NumberSequence.new(0, 1) -- Прозрачность (от 0 до 1)
+                particleEmitter.Lifetime = NumberRange.new(1, 2) -- Время жизни частиц
+                particleEmitter.Rate = particleRate -- Скорость появления частиц
+                particleEmitter.Speed = NumberRange.new(5, 10) -- Скорость движения частиц
+                particleEmitter.SpreadAngle = Vector2.new(360, 360) -- Распространение частиц (по всем направлениям)
+                particleEmitter.Color = ColorSequence.new(particleColor) -- Цвет частиц
+                particleEmitter.Parent = rootPart
+                notifyWithCooldown("Particle Effect Enabled", 3)
+            else
+                notifyWithCooldown("Cannot enable particles: No HumanoidRootPart found", 3)
+                particlesEnabled = false
+            end
+        else
+            notifyWithCooldown("Cannot enable particles: Character not found", 3)
+            particlesEnabled = false
+        end
+    else
+        -- Отключаем частицы
+        if particleEmitter then
+            particleEmitter:Destroy()
+            particleEmitter = nil
+        end
+        notifyWithCooldown("Particle Effect Disabled", 3)
+    end
+end
+
+-- Обновляем частицы при респавне
+LocalPlayer.CharacterAdded:Connect(function(character)
+    if particlesEnabled then
+        wait(0.1) -- Даем время на загрузку персонажа
+        toggleParticles(false) -- Отключаем старые частицы
+        toggleParticles(true) -- Включаем новые частицы
+    end
+end)
+
+-- Добавляем секцию для частиц в UI
+Lib.Menu:AddSection(mainTab, "Visual Effects")
+Lib.Menu:AddToggle(mainTab, "Enable Particles", false, toggleParticles)
+Lib.Menu:AddSlider(mainTab, "Particle Rate", 10, 100, 50, function(value)
+    particleRate = value
+    if particleEmitter then
+        particleEmitter.Rate = particleRate
+    end
+    notifyWithCooldown("Particle Rate set to: " .. value, 3)
+end)
+Lib.Menu:AddColorPicker(mainTab, "Particle Color", particleColor, function(color)
+    particleColor = color
+    if particleEmitter then
+        particleEmitter.Color = ColorSequence.new(particleColor)
+    end
+    notifyWithCooldown("Particle Color updated", 3)
+end)
+
+
+
+-- === Вкладка ESP (если модуль доступен) ===
 if ESP then
+    -- Секция: General ESP Settings
     Lib.Menu:AddSection(espTab, "General ESP Settings")
     Lib.Menu:AddToggle(espTab, "Enable ESP", true, function(state)
         ESP.espEnabled = state
         notifyWithCooldown("ESP " .. (state and "Enabled" or "Disabled"), 3)
-    end, {HoverAnimation = true})
-    Lib.Menu:AddToggle(espTab, "Enable Boxes", true, function(state)
-        ESP.boxesEnabled = state
-        notifyWithCooldown("Boxes " .. (state and "Enabled" or "Disabled"), 3)
-    end, {HoverAnimation = true})
+    end)
+-- Секция: Box Toggle
+Lib.Menu:AddToggle(espTab, "Enable Boxes", true, function(state)
+    ESP.boxesEnabled = state
+    notifyWithCooldown("Boxes " .. (state and "Enabled" or "Disabled"), 3)
+end)
     Lib.Menu:AddToggle(espTab, "Enable Team Check", true, function(state)
         ESP.teamCheckEnabled = state
         notifyWithCooldown("Team Check " .. (state and "Enabled" or "Disabled"), 3)
-    end, {HoverAnimation = true})
+    end)
     Lib.Menu:AddSlider(espTab, "ESP Distance", 100, 3000, 3000, function(value)
         ESP.espMaxDistance = value
         notifyWithCooldown("ESP Distance set to: " .. value .. " studs", 3)
-    end, {RGBTrack = true})
+    end)
 
+    -- Секция: Tracers Settings
     Lib.Menu:AddSection(espTab, "Tracers Settings")
     Lib.Menu:AddToggle(espTab, "Enable Tracers", true, function(state)
         ESP.tracersEnabled = state
         notifyWithCooldown("Tracers " .. (state and "Enabled" or "Disabled"), 3)
-    end, {HoverAnimation = true})
+    end)
     Lib.Menu:AddToggle(espTab, "Tracers From Bottom", false, function(state)
         ESP.tracerFromBottom = state
         notifyWithCooldown("Tracers From Bottom " .. (state and "Enabled" or "Disabled"), 3)
-    end, {HoverAnimation = true})
+    end)
     Lib.Menu:AddSlider(espTab, "Tracer Thickness", 1, 5, 2, function(value)
         ESP.tracerThickness = value
         notifyWithCooldown("Tracer Thickness set to: " .. value, 3)
-    end, {RGBTrack = true})
+    end)
 
-    Lib.Menu:AddSection(espTab, "Skeleton ESP Settings")
-    Lib.Menu:AddToggle(espTab, "Enable Skeleton ESP", false, function(state)
-        ESP.skeletonEnabled = state
-        notifyWithCooldown("Skeleton ESP " .. (state and "Enabled" or "Disabled"), 3)
-    end, {HoverAnimation = true})
+    -- Секция: Skeleton ESP Settings
+Lib.Menu:AddSection(espTab, "Skeleton ESP Settings")
+Lib.Menu:AddToggle(espTab, "Enable Skeleton ESP", false, function(state)
+    ESP.skeletonEnabled = state
+    notifyWithCooldown("Skeleton ESP " .. (state and "Enabled" or "Disabled"), 3)
+end)
 
-    Lib.Menu:AddSection(espTab, "X-Ray Settings")
-    Lib.Menu:AddToggle(espTab, "Enable X-Ray", false, function(state)
-        ESP.xrayEnabled = state
-        notifyWithCooldown("X-Ray " .. (state and "Enabled" or "Disabled"), 3)
-    end, {HoverAnimation = true})
-    Lib.Menu:AddColorPicker(espTab, "X-Ray Color", ESP.xrayColor, function(color)
-        ESP.xrayColor = color
-        notifyWithCooldown("X-Ray color updated", 3)
-    end, {RGBAnimation = true})
+-- Секция: X-Ray Settings
+Lib.Menu:AddSection(espTab, "X-Ray Settings")
+Lib.Menu:AddToggle(espTab, "Enable X-Ray", false, function(state)
+    ESP.xrayEnabled = state
+    notifyWithCooldown("X-Ray " .. (state and "Enabled" or "Disabled"), 3)
+end)
+Lib.Menu:AddColorPicker(espTab, "X-Ray Color", ESP.xrayColor, function(color)
+    ESP.xrayColor = color
+    notifyWithCooldown("X-Ray color updated", 3)
+end)
 
+    -- Секция: Text Settings
     Lib.Menu:AddSection(espTab, "Text Settings")
     Lib.Menu:AddSlider(espTab, "Text Size", 8, 20, 10, function(value)
         ESP.textSize = value
         notifyWithCooldown("Text Size set to: " .. value, 3)
-    end, {RGBTrack = true})
+    end)
 
+    -- Секция: Colors
     Lib.Menu:AddSection(espTab, "Colors")
     Lib.Menu:AddColorPicker(espTab, "Visible Color", ESP.espVisibleColor, function(color)
         ESP.espVisibleColor = color
         notifyWithCooldown("Visible ESP color updated", 3)
-    end, {RGBAnimation = true})
+    end)
     Lib.Menu:AddColorPicker(espTab, "Not Visible Color", ESP.espNotVisibleColor, function(color)
         ESP.espNotVisibleColor = color
         notifyWithCooldown("Not Visible ESP color updated", 3)
-    end, {RGBAnimation = true})
+    end)
 end
 
--- === Вкладка Settings ===
-Lib.Menu:AddSection(settingsTab, "UI Settings")
-Lib.Menu:AddDropdown(settingsTab, "Theme", {"Dark", "Light"}, "Dark", function(theme)
-    currentTheme = theme
-    Lib.Menu:SetTheme(menu, theme)
-    notifyWithCooldown("Theme changed to: " .. theme, 3)
-    saveSettings()
-end, {HoverAnimation = true})
-Lib.Menu:AddButton(settingsTab, "Minimize Menu", function()
-    isMenuMinimized = not isMenuMinimized
-    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-    local goal = isMenuMinimized and {Size = UDim2.new(0, 50, 0, 50)} or {Size = UDim2.new(0, 400, 0, 300)}
-    local tween = TweenService:Create(menu, tweenInfo, goal)
-    tween:Play()
-    notifyWithCooldown(isMenuMinimized and "Menu Minimized" or "Menu Restored", 3)
-end, {HoverAnimation = true})
-Lib.Menu:AddButton(settingsTab, "Save Settings", saveSettings, {HoverAnimation = true})
-
--- Горячая клавиша для меню (с дебагом)
+-- Горячая клавиша для показа/скрытия меню (Right Control)
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.RightControl then
-        print("RightControl pressed, toggling menu. Current visibility:", menu.Visible)
-        if menu.Parent then
-            animateMenu(not menu.Visible)
-            print("Menu visibility after toggle:", menu.Visible)
+        if menu.Visible then
+            Lib.Menu:HideMenu(menu)
         else
-            print("Menu object is missing or destroyed")
+            Lib.Menu:ShowMenu(menu)
         end
     end
 end)
 
--- Поддержка чата
+-- Поддержка новой системы чата (TextChatService)
 local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- Функция для обработки команды /tp
 local function handleChatCommand(message)
+    -- Приводим сообщение к нижнему регистру для игнорирования регистра
     local lowerMessage = message:lower()
+    
+    -- Проверяем, начинается ли сообщение с го
     if lowerMessage:find("^го%s+") then
+        -- Извлекаем ник после г
         local playerName = message:match("^го%s+(.+)$")
         if playerName then
+            -- Убираем пробелы в начале и конце
             playerName = playerName:match("^%s*(.-)%s*$")
             if playerName ~= "" then
+                -- Вызываем существующую функцию телепортации
                 teleportToPlayer(playerName)
             else
                 notifyWithCooldown("Please provide a player name after го", 3)
             end
         else
-            notifyWithCooldown("Invalid го command. Usage: го <player>", 3)
+            notifyWithCooldown("Invalid г command. Usage: го <player>", 3)
         end
     end
 end
 
+-- Проверяем, какая система чата используется
 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+    -- Новая система чата (TextChatService)
     TextChatService.MessageReceived:Connect(function(messageData)
         local speaker = messageData.TextSource
         if speaker then
@@ -714,6 +683,7 @@ if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
         end
     end)
 else
+    -- Старая система чата (DefaultChatSystemChatEvents)
     local chatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 5)
     if chatEvents then
         chatEvents.OnMessageDoneFiltering:Connect(function(messageData)
