@@ -35,18 +35,32 @@ function CheatMenuLibrary.new(config)
     self.isOpen = false
     
     -- Инициализация UI
-    self:InitUI()
+    local success, err = pcall(function()
+        self:InitUI()
+    end)
+    if not success then
+        warn("Error initializing UI: " .. tostring(err))
+        return nil
+    end
+
     self:SetupKeybind()
     return self
 end
 
 -- Инициализация пользовательского интерфейса
 function CheatMenuLibrary:InitUI()
+    -- Проверка, что PlayerGui доступен
+    if not LocalPlayer:FindFirstChild("PlayerGui") then
+        warn("PlayerGui not found!")
+        return
+    end
+
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "CheatMenu"
     ScreenGui.Parent = LocalPlayer.PlayerGui
     ScreenGui.ResetOnSpawn = false
     ScreenGui.IgnoreGuiInset = true
+    ScreenGui.Enabled = true
     self.ScreenGui = ScreenGui
     
     -- Главный фрейм
@@ -57,6 +71,7 @@ function CheatMenuLibrary:InitUI()
     MainFrame.BorderSizePixel = 0
     MainFrame.ClipsDescendants = true
     MainFrame.Parent = ScreenGui
+    MainFrame.Visible = false -- Начально скрыт
     self.MainFrame = MainFrame
     
     -- Закругленные углы
@@ -145,9 +160,6 @@ function CheatMenuLibrary:InitUI()
     CloseButton.MouseButton1Click:Connect(function()
         self:Close()
     end)
-    
-    -- Начальное состояние - скрыто
-    MainFrame.Visible = false
 end
 
 -- Настройка горячей клавиши
@@ -167,6 +179,10 @@ end
 -- Открытие меню
 function CheatMenuLibrary:Open()
     if self.isOpen then return end
+    if not self.MainFrame then
+        warn("MainFrame not initialized!")
+        return
+    end
     self.isOpen = true
     self.MainFrame.Visible = true
     
@@ -179,6 +195,10 @@ end
 -- Закрытие меню
 function CheatMenuLibrary:Close()
     if not self.isOpen then return end
+    if not self.MainFrame then
+        warn("MainFrame not initialized!")
+        return
+    end
     self.isOpen = false
     
     local tweenInfo = TweenInfo.new(self.config.animationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
@@ -228,12 +248,17 @@ end
 
 -- Добавление вкладки
 function CheatMenuLibrary:AddTab(name)
+    if not self.TabBar or not self.TabContainer then
+        warn("TabBar or TabContainer not initialized!")
+        return { content = Instance.new("Frame") }
+    end
+
     local tab = {}
     tab.name = name
     
     -- Кнопка вкладки
     local TabButton = Instance.new("TextButton")
-    TabButton.Size = UDim2.new(0, 80, 1, 0) -- Увеличена высота кнопки
+    TabButton.Size = UDim2.new(0, 80, 1, 0)
     TabButton.BackgroundColor3 = self.config.theme.primaryColor
     TabButton.Text = name
     TabButton.TextColor3 = self.config.theme.textColor
@@ -285,9 +310,13 @@ end
 -- Переключение вкладки
 function CheatMenuLibrary:SwitchTab(tab)
     if self.currentTab == tab then return end
+    if not tab.content then
+        warn("Tab content not initialized for: " .. tab.name)
+        return
+    end
     
     -- Скрываем текущую вкладку
-    if self.currentTab then
+    if self.currentTab and self.currentTab.content then
         self.currentTab.content.Visible = false
         for _, child in pairs(self.TabBar:GetChildren()) do
             if child:IsA("TextButton") and child.Text == self.currentTab.name then
@@ -304,59 +333,6 @@ function CheatMenuLibrary:SwitchTab(tab)
             child:FindFirstChildOfClass("UIGradient").Enabled = true
         end
     end
-end
-
--- Добавление вкладки профиля
-function CheatMenuLibrary:AddProfileTab()
-    local tab = self:AddTab("Profile")
-    
-    -- Аватарка
-    local AvatarImage = Instance.new("ImageLabel")
-    AvatarImage.Size = UDim2.new(0, 100, 0, 100)
-    AvatarImage.Position = UDim2.new(0.5, -50, 0, 10)
-    AvatarImage.BackgroundTransparency = 1
-    AvatarImage.Image = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-    AvatarImage.Parent = tab.content
-    
-    local AvatarCorner = Instance.new("UICorner")
-    AvatarCorner.CornerRadius = UDim.new(1, 0)
-    AvatarCorner.Parent = AvatarImage
-    
-    -- Ник
-    local NameLabel = Instance.new("TextLabel")
-    NameLabel.Size = UDim2.new(1, -10, 0, 30)
-    NameLabel.Position = UDim2.new(0, 5, 0, 120)
-    NameLabel.BackgroundTransparency = 1
-    NameLabel.Text = "Name: " .. LocalPlayer.Name
-    NameLabel.TextColor3 = self.config.theme.textColor
-    NameLabel.Font = Enum.Font.GothamBold
-    NameLabel.TextSize = 16
-    NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    NameLabel.Parent = tab.content
-    
-    -- ID игрока
-    local IdLabel = Instance.new("TextLabel")
-    IdLabel.Size = UDim2.new(1, -10, 0, 30)
-    IdLabel.Position = UDim2.new(0, 5, 0, 150)
-    IdLabel.BackgroundTransparency = 1
-    IdLabel.Text = "User ID: " .. LocalPlayer.UserId
-    IdLabel.TextColor3 = self.config.theme.textColor
-    IdLabel.Font = Enum.Font.Gotham
-    IdLabel.TextSize = 14
-    IdLabel.TextXAlignment = Enum.TextXAlignment.Left
-    IdLabel.Parent = tab.content
-    
-    -- Кастомная информация
-    local CustomInfo = Instance.new("TextLabel")
-    CustomInfo.Size = UDim2.new(1, -10, 0, 30)
-    CustomInfo.Position = UDim2.new(0, 5, 0, 180)
-    CustomInfo.BackgroundTransparency = 1
-    CustomInfo.Text = "Status: Active"
-    CustomInfo.TextColor3 = self.config.theme.textColor
-    CustomInfo.Font = Enum.Font.Gotham
-    CustomInfo.TextSize = 14
-    CustomInfo.TextXAlignment = Enum.TextXAlignment.Left
-    CustomInfo.Parent = tab.content
 end
 
 -- Добавление кнопки
@@ -573,22 +549,11 @@ function CheatMenuLibrary:AddDropdown(tab, name, options, default, callback)
     end)
 end
 
--- Изменение темы
-function CheatMenuLibrary:SetTheme(theme)
-    self.config.theme = theme
-    self.MainFrame.BackgroundColor3 = theme.secondaryColor
-    for _, tab in pairs(self.tabs) do
-        for _, button in ipairs(tab.content:GetChildren()) do
-            if button:IsA("TextButton") or button:IsA("Frame") then
-                button.BackgroundColor3 = theme.primaryColor
-            end
-        end
-    end
-end
-
 -- Очистка меню
 function CheatMenuLibrary:Destroy()
-    self.ScreenGui:Destroy()
+    if self.ScreenGui then
+        self.ScreenGui:Destroy()
+    end
     self = nil
 end
 
