@@ -1,5 +1,5 @@
 -- CheatMenuLibrary.lua
--- Многофункциональная библиотека для создания красивого чит-меню в Roblox
+-- Многофункциональная библиотека для создания чит-меню в Roblox
 local CheatMenuLibrary = {}
 CheatMenuLibrary.__index = CheatMenuLibrary
 
@@ -8,7 +8,6 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
 
 -- Создание нового экземпляра меню
 function CheatMenuLibrary.new(config)
@@ -16,14 +15,7 @@ function CheatMenuLibrary.new(config)
     
     -- Конфигурация по умолчанию
     self.config = {
-        title = config.title or "Elite Cheat Menu",
-        theme = config.theme or {
-            primaryColor = Color3.fromRGB(30, 144, 255),
-            secondaryColor = Color3.fromRGB(25, 25, 25),
-            textColor = Color3.fromRGB(255, 255, 255),
-            accentColor = Color3.fromRGB(255, 69, 0),
-            gradient = {Color3.fromRGB(30, 144, 255), Color3.fromRGB(0, 255, 127)}
-        },
+        title = config.title or "Cheat Menu",
         keybind = config.keybind or Enum.KeyCode.F9,
         draggable = config.draggable ~= false,
         animationSpeed = config.animationSpeed or 0.3,
@@ -40,7 +32,11 @@ function CheatMenuLibrary.new(config)
     end)
     if not success then
         warn("Error initializing UI: " .. tostring(err))
-        return nil
+        error("Failed to initialize UI: " .. tostring(err))
+    end
+
+    if not self.ScreenGui or not self.MainFrame then
+        error("UI initialization failed: ScreenGui or MainFrame is nil")
     end
 
     self:SetupKeybind()
@@ -51,8 +47,7 @@ end
 function CheatMenuLibrary:InitUI()
     -- Проверка, что PlayerGui доступен
     if not LocalPlayer:FindFirstChild("PlayerGui") then
-        warn("PlayerGui not found!")
-        return
+        error("PlayerGui not found!")
     end
 
     local ScreenGui = Instance.new("ScreenGui")
@@ -67,7 +62,7 @@ function CheatMenuLibrary:InitUI()
     local MainFrame = Instance.new("Frame")
     MainFrame.Size = UDim2.new(0, 350, 0, 450)
     MainFrame.Position = UDim2.new(0.5, -175, 0.5, -225)
-    MainFrame.BackgroundColor3 = self.config.theme.secondaryColor
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     MainFrame.BorderSizePixel = 0
     MainFrame.ClipsDescendants = true
     MainFrame.Parent = ScreenGui
@@ -96,19 +91,15 @@ function CheatMenuLibrary:InitUI()
     -- Заголовок
     local TitleFrame = Instance.new("Frame")
     TitleFrame.Size = UDim2.new(1, 0, 0, 50)
-    TitleFrame.BackgroundColor3 = self.config.theme.primaryColor
+    TitleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     TitleFrame.Parent = MainFrame
-    
-    local TitleGradient = Instance.new("UIGradient")
-    TitleGradient.Color = ColorSequence.new(self.config.theme.gradient)
-    TitleGradient.Parent = TitleFrame
     
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
     TitleLabel.Position = UDim2.new(0, 10, 0, 0)
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Text = self.config.title
-    TitleLabel.TextColor3 = self.config.theme.textColor
+    TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
     TitleLabel.Font = Enum.Font.GothamBold
     TitleLabel.TextSize = 18
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -118,9 +109,9 @@ function CheatMenuLibrary:InitUI()
     local CloseButton = Instance.new("TextButton")
     CloseButton.Size = UDim2.new(0, 30, 0, 30)
     CloseButton.Position = UDim2.new(1, -40, 0, 10)
-    CloseButton.BackgroundColor3 = self.config.theme.accentColor
+    CloseButton.BackgroundColor3 = Color3.fromRGB(0, 255, 127)
     CloseButton.Text = "X"
-    CloseButton.TextColor3 = self.config.theme.textColor
+    CloseButton.TextColor3 = Color3.fromRGB(220, 220, 220)
     CloseButton.Font = Enum.Font.Gotham
     CloseButton.TextSize = 14
     CloseButton.Parent = TitleFrame
@@ -133,7 +124,7 @@ function CheatMenuLibrary:InitUI()
     local TabBar = Instance.new("Frame")
     TabBar.Size = UDim2.new(1, 0, 0, 40)
     TabBar.Position = UDim2.new(0, 0, 0, 50)
-    TabBar.BackgroundColor3 = self.config.theme.secondaryColor
+    TabBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     TabBar.Parent = MainFrame
     self.TabBar = TabBar
     
@@ -180,8 +171,7 @@ end
 function CheatMenuLibrary:Open()
     if self.isOpen then return end
     if not self.MainFrame then
-        warn("MainFrame not initialized!")
-        return
+        error("MainFrame not initialized!")
     end
     self.isOpen = true
     self.MainFrame.Visible = true
@@ -196,8 +186,7 @@ end
 function CheatMenuLibrary:Close()
     if not self.isOpen then return end
     if not self.MainFrame then
-        warn("MainFrame not initialized!")
-        return
+        error("MainFrame not initialized!")
     end
     self.isOpen = false
     
@@ -249,8 +238,7 @@ end
 -- Добавление вкладки
 function CheatMenuLibrary:AddTab(name)
     if not self.TabBar or not self.TabContainer then
-        warn("TabBar or TabContainer not initialized!")
-        return { content = Instance.new("Frame") }
+        error("TabBar or TabContainer not initialized!")
     end
 
     local tab = {}
@@ -259,9 +247,9 @@ function CheatMenuLibrary:AddTab(name)
     -- Кнопка вкладки
     local TabButton = Instance.new("TextButton")
     TabButton.Size = UDim2.new(0, 80, 1, 0)
-    TabButton.BackgroundColor3 = self.config.theme.primaryColor
+    TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     TabButton.Text = name
-    TabButton.TextColor3 = self.config.theme.textColor
+    TabButton.TextColor3 = Color3.fromRGB(220, 220, 220)
     TabButton.Font = Enum.Font.Gotham
     TabButton.TextSize = 14
     TabButton.Parent = self.TabBar
@@ -269,11 +257,6 @@ function CheatMenuLibrary:AddTab(name)
     local TabCorner = Instance.new("UICorner")
     TabCorner.CornerRadius = UDim.new(0, 8)
     TabCorner.Parent = TabButton
-    
-    local TabGradient = Instance.new("UIGradient")
-    TabGradient.Color = ColorSequence.new(self.config.theme.gradient)
-    TabGradient.Enabled = false
-    TabGradient.Parent = TabButton
     
     -- Контейнер для элементов вкладки
     local TabContent = Instance.new("ScrollingFrame")
@@ -311,8 +294,7 @@ end
 function CheatMenuLibrary:SwitchTab(tab)
     if self.currentTab == tab then return end
     if not tab.content then
-        warn("Tab content not initialized for: " .. tab.name)
-        return
+        error("Tab content not initialized for: " .. tab.name)
     end
     
     -- Скрываем текущую вкладку
@@ -320,7 +302,7 @@ function CheatMenuLibrary:SwitchTab(tab)
         self.currentTab.content.Visible = false
         for _, child in pairs(self.TabBar:GetChildren()) do
             if child:IsA("TextButton") and child.Text == self.currentTab.name then
-                child:FindFirstChildOfClass("UIGradient").Enabled = false
+                child.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
             end
         end
     end
@@ -330,7 +312,7 @@ function CheatMenuLibrary:SwitchTab(tab)
     tab.content.Visible = true
     for _, child in pairs(self.TabBar:GetChildren()) do
         if child:IsA("TextButton") and child.Text == tab.name then
-            child:FindFirstChildOfClass("UIGradient").Enabled = true
+            child.BackgroundColor3 = Color3.fromRGB(0, 255, 127)
         end
     end
 end
@@ -339,9 +321,9 @@ end
 function CheatMenuLibrary:AddButton(tab, name, callback)
     local Button = Instance.new("TextButton")
     Button.Size = UDim2.new(1, 0, 0, 35)
-    Button.BackgroundColor3 = self.config.theme.primaryColor
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     Button.Text = name
-    Button.TextColor3 = self.config.theme.textColor
+    Button.TextColor3 = Color3.fromRGB(220, 220, 220)
     Button.Font = Enum.Font.Gotham
     Button.TextSize = 14
     Button.Parent = tab:IsA("Frame") and tab or tab.content
@@ -349,19 +331,6 @@ function CheatMenuLibrary:AddButton(tab, name, callback)
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = Button
-    
-    local ButtonGradient = Instance.new("UIGradient")
-    ButtonGradient.Color = ColorSequence.new(self.config.theme.gradient)
-    ButtonGradient.Enabled = false
-    ButtonGradient.Parent = Button
-    
-    Button.MouseEnter:Connect(function()
-        ButtonGradient.Enabled = true
-    end)
-    
-    Button.MouseLeave:Connect(function()
-        ButtonGradient.Enabled = false
-    end)
     
     Button.MouseButton1Click:Connect(function()
         callback()
@@ -372,7 +341,7 @@ end
 function CheatMenuLibrary:AddToggle(tab, name, default, callback)
     local ToggleFrame = Instance.new("Frame")
     ToggleFrame.Size = UDim2.new(1, 0, 0, 35)
-    ToggleFrame.BackgroundColor3 = self.config.theme.primaryColor
+    ToggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     ToggleFrame.Parent = tab:IsA("Frame") and tab or tab.content
     
     local UICorner = Instance.new("UICorner")
@@ -383,7 +352,7 @@ function CheatMenuLibrary:AddToggle(tab, name, default, callback)
     ToggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
     ToggleLabel.BackgroundTransparency = 1
     ToggleLabel.Text = name
-    ToggleLabel.TextColor3 = self.config.theme.textColor
+    ToggleLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
     ToggleLabel.Font = Enum.Font.Gotham
     ToggleLabel.TextSize = 14
     ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -392,7 +361,7 @@ function CheatMenuLibrary:AddToggle(tab, name, default, callback)
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Size = UDim2.new(0, 40, 0, 20)
     ToggleButton.Position = UDim2.new(1, -45, 0.5, -10)
-    ToggleButton.BackgroundColor3 = default and self.config.theme.accentColor or Color3.fromRGB(100, 100, 100)
+    ToggleButton.BackgroundColor3 = default and Color3.fromRGB(0, 255, 127) or Color3.fromRGB(100, 100, 100)
     ToggleButton.Text = ""
     ToggleButton.Parent = ToggleFrame
     
@@ -404,7 +373,7 @@ function CheatMenuLibrary:AddToggle(tab, name, default, callback)
     ToggleButton.MouseButton1Click:Connect(function()
         state = not state
         local tweenInfo = TweenInfo.new(self.config.animationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-        local goal = state and {BackgroundColor3 = self.config.theme.accentColor} or {BackgroundColor3 = Color3.fromRGB(100, 100, 100)}
+        local goal = state and {BackgroundColor3 = Color3.fromRGB(0, 255, 127)} or {BackgroundColor3 = Color3.fromRGB(100, 100, 100)}
         local tween = TweenService:Create(ToggleButton, tweenInfo, goal)
         tween:Play()
         callback(state)
@@ -415,7 +384,7 @@ end
 function CheatMenuLibrary:AddSlider(tab, name, min, max, default, callback)
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Size = UDim2.new(1, 0, 0, 50)
-    SliderFrame.BackgroundColor3 = self.config.theme.primaryColor
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     SliderFrame.Parent = tab:IsA("Frame") and tab or tab.content
     
     local UICorner = Instance.new("UICorner")
@@ -426,7 +395,7 @@ function CheatMenuLibrary:AddSlider(tab, name, min, max, default, callback)
     SliderLabel.Size = UDim2.new(1, 0, 0, 20)
     SliderLabel.BackgroundTransparency = 1
     SliderLabel.Text = name .. ": " .. default
-    SliderLabel.TextColor3 = self.config.theme.textColor
+    SliderLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
     SliderLabel.Font = Enum.Font.Gotham
     SliderLabel.TextSize = 14
     SliderLabel.Parent = SliderFrame
@@ -443,7 +412,7 @@ function CheatMenuLibrary:AddSlider(tab, name, min, max, default, callback)
     
     local SliderFill = Instance.new("Frame")
     SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    SliderFill.BackgroundColor3 = self.config.theme.accentColor
+    SliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 127)
     SliderFill.Parent = SliderBar
     
     local FillCorner = Instance.new("UICorner")
@@ -475,77 +444,6 @@ function CheatMenuLibrary:AddSlider(tab, name, min, max, default, callback)
             SliderLabel.Text = name .. ": " .. value
             callback(value)
         end
-    end)
-end
-
--- Добавление выпадающего списка
-function CheatMenuLibrary:AddDropdown(tab, name, options, default, callback)
-    local DropdownFrame = Instance.new("Frame")
-    DropdownFrame.Size = UDim2.new(1, 0, 0, 35)
-    DropdownFrame.BackgroundColor3 = self.config.theme.primaryColor
-    DropdownFrame.Parent = tab:IsA("Frame") and tab or tab.content
-    
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
-    UICorner.Parent = DropdownFrame
-    
-    local DropdownButton = Instance.new("TextButton")
-    DropdownButton.Size = UDim2.new(1, 0, 1, 0)
-    DropdownButton.BackgroundTransparency = 1
-    DropdownButton.Text = name .. ": " .. default
-    DropdownButton.TextColor3 = self.config.theme.textColor
-    DropdownButton.Font = Enum.Font.Gotham
-    DropdownButton.TextSize = 14
-    DropdownButton.TextXAlignment = Enum.TextXAlignment.Left
-    DropdownButton.Parent = DropdownFrame
-    
-    local isOpen = false
-    local DropdownList = Instance.new("Frame")
-    DropdownList.Size = UDim2.new(1, 0, 0, 0)
-    DropdownList.Position = UDim2.new(0, 0, 1, 5)
-    DropdownList.BackgroundColor3 = self.config.theme.secondaryColor
-    DropdownList.ClipsDescendants = true
-    DropdownList.Visible = false
-    DropdownList.Parent = DropdownFrame
-    
-    local ListCorner = Instance.new("UICorner")
-    ListCorner.CornerRadius = UDim.new(0, 8)
-    ListCorner.Parent = DropdownList
-    
-    local ListLayout = Instance.new("UIListLayout")
-    ListLayout.Padding = UDim.new(0, 2)
-    ListLayout.Parent = DropdownList
-    
-    for i, option in ipairs(options) do
-        local OptionButton = Instance.new("TextButton")
-        OptionButton.Size = UDim2.new(1, -10, 0, 25)
-        OptionButton.BackgroundColor3 = self.config.theme.primaryColor
-        OptionButton.Text = option
-        OptionButton.TextColor3 = self.config.theme.textColor
-        OptionButton.Font = Enum.Font.Gotham
-        OptionButton.TextSize = 14
-        OptionButton.Parent = DropdownList
-        
-        local OptionCorner = Instance.new("UICorner")
-        OptionCorner.CornerRadius = UDim.new(0, 6)
-        OptionCorner.Parent = OptionButton
-        
-        OptionButton.MouseButton1Click:Connect(function()
-            DropdownButton.Text = name .. ": " .. option
-            isOpen = false
-            DropdownList.Visible = false
-            DropdownList.Size = UDim2.new(1, 0, 0, 0)
-            callback(option)
-        end)
-    end
-    
-    DropdownButton.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        DropdownList.Visible = isOpen
-        local tweenInfo = TweenInfo.new(self.config.animationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-        local goal = isOpen and {Size = UDim2.new(1, 0, 0, ListLayout.AbsoluteContentSize.Y)} or {Size = UDim2.new(1, 0, 0, 0)}
-        local tween = TweenService:Create(DropdownList, tweenInfo, goal)
-        tween:Play()
     end)
 end
 
