@@ -1,7 +1,7 @@
 -- MainScript.lua
 
--- Подгрузка библиотеки по ссылке
-local Lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
+-- Подгрузка библиотеки Luxt1
+local Luxt1 = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
 
 -- Подгрузка ESP-модуля
 local ESP
@@ -9,9 +9,17 @@ local success, err = pcall(function()
     ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/esp-modul"))()
 end)
 if not success or not ESP then
-    Lib.Menu:Notify("Failed to load ESP module! Error: " .. (err or "Unknown error"), 5)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Error",
+        Text = "Failed to load ESP module! Error: " .. (err or "Unknown error"),
+        Duration = 5
+    })
 else
-    Lib.Menu:Notify("ESP module loaded successfully", 3)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Success",
+        Text = "ESP module loaded successfully",
+        Duration = 3
+    })
 end
 
 -- Подгрузка Fly-модуля
@@ -20,9 +28,17 @@ local success, err = pcall(function()
     Fly = loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/fly-modul"))()
 end)
 if not success or not Fly then
-    Lib.Menu:Notify("Failed to load Fly module! Error: " .. (err or "Unknown error"), 5)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Error",
+        Text = "Failed to load Fly module! Error: " .. (err or "Unknown error"),
+        Duration = 5
+    })
 else
-    Lib.Menu:Notify("Fly module loaded successfully!", 3)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Success",
+        Text = "Fly module loaded successfully!",
+        Duration = 3
+    })
 end
 
 -- Основные сервисы
@@ -34,12 +50,12 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
 -- Создаем меню
-local menu = Lib.Menu:CreateMenu("Za Xoxlov")
+local Window = Luxt1.CreateWindow("Za Xoxlov", "")
 
 -- Вкладки
-local mainTab = Lib.Menu:AddTab(menu, "Main")
-local teleportTab = Lib.Menu:AddTab(menu, "Teleport")
-local espTab = ESP and Lib.Menu:AddTab(menu, "ESP") -- Создаем вкладку ESP только если модуль загрузился
+local mainTab = Window:Tab("Main", "")
+local teleportTab = Window:Tab("Teleport", "")
+local espTab = ESP and Window:Tab("ESP", "") -- Создаем вкладку ESP только если модуль загрузился
 
 -- Переменные для функционала
 local speedEnabled = false
@@ -64,7 +80,11 @@ local notificationCooldown = 1 -- Задержка между уведомлен
 local function notifyWithCooldown(message, duration)
     local currentTime = tick()
     if currentTime - lastNotificationTime >= notificationCooldown then
-        Lib.Menu:Notify(message, duration)
+        game.StarterGui:SetCore("SendNotification", {
+            Title = "Notification",
+            Text = message,
+            Duration = duration
+        })
         lastNotificationTime = currentTime
     end
 end
@@ -144,7 +164,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
 
 -- Функция для Anti-AFK
 local function toggleAntiAfk(state)
@@ -295,8 +314,8 @@ end)
 
 -- === Вкладка Main ===
 -- Секция: Speed and Jump
-Lib.Menu:AddSection(mainTab, "Speed and Jump")
-Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
+local speedJumpSection = mainTab:Section("Speed and Jump")
+speedJumpSection:Toggle("Enable Speedhack", function(state)
     speedEnabled = state
     if state then
         currentSpeed = sliderSpeed
@@ -324,7 +343,7 @@ Lib.Menu:AddToggle(mainTab, "Enable Speedhack", false, function(state)
         end
     end
 end)
-Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, defaultSpeed, function(value)
+speedJumpSection:Slider("Speed", 16, 100, function(value)
     sliderSpeed = value
     if speedEnabled then
         currentSpeed = sliderSpeed
@@ -344,7 +363,7 @@ Lib.Menu:AddSlider(mainTab, "Speed", 16, 100, defaultSpeed, function(value)
         notifyWithCooldown("Enable Speedhack to apply speed", 3)
     end
 end)
-Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
+speedJumpSection:Toggle("Enable Jump Power", function(state)
     jumpEnabled = state
     if state then
         currentJumpPower = sliderJumpPower
@@ -372,7 +391,7 @@ Lib.Menu:AddToggle(mainTab, "Enable Jump Power", false, function(state)
         end
     end
 end)
-Lib.Menu:AddSlider(mainTab, "Jump Power", 50, 200, defaultJumpPower, function(value)
+speedJumpSection:Slider("Jump Power", 50, 200, function(value)
     sliderJumpPower = value
     if jumpEnabled then
         currentJumpPower = sliderJumpPower
@@ -417,14 +436,12 @@ local function toggleInfiniteJump(state)
     end
 end
 
-
-Lib.Menu:AddToggle(mainTab, "Enable Infinite Jump", false, toggleInfiniteJump)
-
+speedJumpSection:Toggle("Enable Infinite Jump", toggleInfiniteJump)
 
 -- Секция: Fly (если модуль доступен)
 if Fly then
-    Lib.Menu:AddSection(mainTab, "Fly Settings")
-    Lib.Menu:AddToggle(mainTab, "Enable Fly", false, function(state)
+    local flySection = mainTab:Section("Fly Settings")
+    flySection:Toggle("Enable Fly", function(state)
         local success, message = Fly:ToggleFly(state)
         if success then
             notifyWithCooldown(message, 3)
@@ -432,37 +449,35 @@ if Fly then
             notifyWithCooldown("Fly Error: " .. message, 3)
         end
     end)
-    Lib.Menu:AddSlider(mainTab, "Fly Speed", 50, 200, 50, function(value)
+    flySection:Slider("Fly Speed", 50, 200, function(value)
         Fly.flySpeed = value
         notifyWithCooldown("Fly Speed set to: " .. value, 3)
     end)
 end
 
 -- Секция: Other Movement
-Lib.Menu:AddSection(mainTab, "Other Movement")
-Lib.Menu:AddToggle(mainTab, "Enable Noclip", false, toggleNoclip)
-
-
-
-
+local otherMovementSection = mainTab:Section("Other Movement")
+otherMovementSection:Toggle("Enable Noclip", toggleNoclip)
 
 -- Секция: Utility
-Lib.Menu:AddSection(mainTab, "Utility")
-Lib.Menu:AddToggle(mainTab, "Enable Anti-AFK", false, toggleAntiAfk)
+local utilitySection = mainTab:Section("Utility")
+utilitySection:Toggle("Enable Anti-AFK", toggleAntiAfk)
 
 -- === Вкладка Teleport ===
 -- Секция: Teleport to Player
-Lib.Menu:AddSection(teleportTab, "Teleport to Player")
-local teleportTextBox = Lib.Menu:AddTextBox(teleportTab, "Player Name (First Letters)", "", function(playerName)
+local teleportPlayerSection = teleportTab:Section("Teleport to Player")
+local lastPlayerName = ""
+teleportPlayerSection:TextBox("Player Name (First Letters)", "Enter name", function(playerName)
+    lastPlayerName = playerName
     teleportToPlayer(playerName)
 end)
-Lib.Menu:AddButton(teleportTab, "Teleport to Player", function()
-    teleportToPlayer(teleportTextBox.Text)
+teleportPlayerSection:Button("Teleport to Player", function()
+    teleportToPlayer(lastPlayerName)
 end)
 
 -- Секция: Teleport on Click
-Lib.Menu:AddSection(teleportTab, "Teleport on Click")
-Lib.Menu:AddToggle(teleportTab, "Enable Teleport on Click", false, function(state)
+local teleportClickSection = teleportTab:Section("Teleport on Click")
+teleportClickSection:Toggle("Enable Teleport on Click", function(state)
     teleportOnClickEnabled = state
     if state then
         notifyWithCooldown("Teleport on Click Enabled (" .. teleportKey.Name .. " + Click)", 3)
@@ -470,7 +485,7 @@ Lib.Menu:AddToggle(teleportTab, "Enable Teleport on Click", false, function(stat
         notifyWithCooldown("Teleport on Click Disabled", 3)
     end
 end)
-Lib.Menu:AddDropdown(teleportTab, "Teleport Key", {"LeftControl", "LeftAlt", "LeftShift"}, "LeftControl", function(key)
+teleportClickSection:DropDown("Teleport Key", {"LeftControl", "LeftAlt", "LeftShift"}, function(key)
     if key == "LeftControl" then
         teleportKey = Enum.KeyCode.LeftControl
     elseif key == "LeftAlt" then
@@ -500,14 +515,14 @@ local function toggleParticles(state)
             if rootPart then
                 -- Создаем ParticleEmitter
                 particleEmitter = Instance.new("ParticleEmitter")
-                particleEmitter.Texture = "rbxassetid://243098098" -- Текстура искр (можно заменить)
-                particleEmitter.Size = NumberSequence.new(0.5) -- Размер частиц
-                particleEmitter.Transparency = NumberSequence.new(0, 1) -- Прозрачность (от 0 до 1)
-                particleEmitter.Lifetime = NumberRange.new(1, 2) -- Время жизни частиц
-                particleEmitter.Rate = particleRate -- Скорость появления частиц
-                particleEmitter.Speed = NumberRange.new(5, 10) -- Скорость движения частиц
-                particleEmitter.SpreadAngle = Vector2.new(360, 360) -- Распространение частиц (по всем направлениям)
-                particleEmitter.Color = ColorSequence.new(particleColor) -- Цвет частиц
+                particleEmitter.Texture = "rbxassetid://243098098" -- Текстура искр
+                particleEmitter.Size = NumberSequence.new(0.5)
+                particleEmitter.Transparency = NumberSequence.new(0, 1)
+                particleEmitter.Lifetime = NumberRange.new(1, 2)
+                particleEmitter.Rate = particleRate
+                particleEmitter.Speed = NumberRange.new(5, 10)
+                particleEmitter.SpreadAngle = Vector2.new(360, 360)
+                particleEmitter.Color = ColorSequence.new(particleColor)
                 particleEmitter.Parent = rootPart
                 notifyWithCooldown("Particle Effect Enabled", 3)
             else
@@ -519,7 +534,6 @@ local function toggleParticles(state)
             particlesEnabled = false
         end
     else
-        -- Отключаем частицы
         if particleEmitter then
             particleEmitter:Destroy()
             particleEmitter = nil
@@ -531,116 +545,143 @@ end
 -- Обновляем частицы при респавне
 LocalPlayer.CharacterAdded:Connect(function(character)
     if particlesEnabled then
-        wait(0.1) -- Даем время на загрузку персонажа
-        toggleParticles(false) -- Отключаем старые частицы
-        toggleParticles(true) -- Включаем новые частицы
+        wait(0.1)
+        toggleParticles(false)
+        toggleParticles(true)
     end
 end)
 
 -- Добавляем секцию для частиц в UI
-Lib.Menu:AddSection(mainTab, "Visual Effects")
-Lib.Menu:AddToggle(mainTab, "Enable Particles", false, toggleParticles)
-Lib.Menu:AddSlider(mainTab, "Particle Rate", 10, 100, 50, function(value)
+local visualEffectsSection = mainTab:Section("Visual Effects")
+visualEffectsSection:Toggle("Enable Particles", toggleParticles)
+visualEffectsSection:Slider("Particle Rate", 10, 100, function(value)
     particleRate = value
     if particleEmitter then
         particleEmitter.Rate = particleRate
     end
     notifyWithCooldown("Particle Rate set to: " .. value, 3)
 end)
-Lib.Menu:AddColorPicker(mainTab, "Particle Color", particleColor, function(color)
-    particleColor = color
-    if particleEmitter then
-        particleEmitter.Color = ColorSequence.new(particleColor)
+-- Для ColorPicker используем TextBox для ввода RGB
+visualEffectsSection:TextBox("Particle Color (R,G,B)", "255,0,0", function(input)
+    local r, g, b = input:match("(%d+),(%d+),(%d+)")
+    if r and g and b then
+        r, g, b = tonumber(r), tonumber(g), tonumber(b)
+        if r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255 then
+            particleColor = Color3.fromRGB(r, g, b)
+            if particleEmitter then
+                particleEmitter.Color = ColorSequence.new(particleColor)
+            end
+            notifyWithCooldown("Particle Color updated", 3)
+        else
+            notifyWithCooldown("Invalid RGB values (0-255)", 3)
+        end
+    else
+        notifyWithCooldown("Invalid format. Use: R,G,B (e.g., 255,0,0)", 3)
     end
-    notifyWithCooldown("Particle Color updated", 3)
 end)
-
-
 
 -- === Вкладка ESP (если модуль доступен) ===
 if ESP then
     -- Секция: General ESP Settings
-    Lib.Menu:AddSection(espTab, "General ESP Settings")
-    Lib.Menu:AddToggle(espTab, "Enable ESP", true, function(state)
+    local generalEspSection = espTab:Section("General ESP Settings")
+    generalEspSection:Toggle("Enable ESP", function(state)
         ESP.espEnabled = state
         notifyWithCooldown("ESP " .. (state and "Enabled" or "Disabled"), 3)
     end)
--- Секция: Box Toggle
-Lib.Menu:AddToggle(espTab, "Enable Boxes", true, function(state)
-    ESP.boxesEnabled = state
-    notifyWithCooldown("Boxes " .. (state and "Enabled" or "Disabled"), 3)
-end)
-    Lib.Menu:AddToggle(espTab, "Enable Team Check", true, function(state)
+    generalEspSection:Toggle("Enable Boxes", function(state)
+        ESP.boxesEnabled = state
+        notifyWithCooldown("Boxes " .. (state and "Enabled" or "Disabled"), 3)
+    end)
+    generalEspSection:Toggle("Enable Team Check", function(state)
         ESP.teamCheckEnabled = state
         notifyWithCooldown("Team Check " .. (state and "Enabled" or "Disabled"), 3)
     end)
-    Lib.Menu:AddSlider(espTab, "ESP Distance", 100, 3000, 3000, function(value)
+    generalEspSection:Slider("ESP Distance", 100, 3000, function(value)
         ESP.espMaxDistance = value
         notifyWithCooldown("ESP Distance set to: " .. value .. " studs", 3)
     end)
 
     -- Секция: Tracers Settings
-    Lib.Menu:AddSection(espTab, "Tracers Settings")
-    Lib.Menu:AddToggle(espTab, "Enable Tracers", true, function(state)
+    local tracersSection = espTab:Section("Tracers Settings")
+    tracersSection:Toggle("Enable Tracers", function(state)
         ESP.tracersEnabled = state
         notifyWithCooldown("Tracers " .. (state and "Enabled" or "Disabled"), 3)
     end)
-    Lib.Menu:AddToggle(espTab, "Tracers From Bottom", false, function(state)
+    tracersSection:Toggle("Tracers From Bottom", function(state)
         ESP.tracerFromBottom = state
         notifyWithCooldown("Tracers From Bottom " .. (state and "Enabled" or "Disabled"), 3)
     end)
-    Lib.Menu:AddSlider(espTab, "Tracer Thickness", 1, 5, 2, function(value)
+    tracersSection:Slider("Tracer Thickness", 1, 5, function(value)
         ESP.tracerThickness = value
         notifyWithCooldown("Tracer Thickness set to: " .. value, 3)
     end)
 
     -- Секция: Skeleton ESP Settings
-Lib.Menu:AddSection(espTab, "Skeleton ESP Settings")
-Lib.Menu:AddToggle(espTab, "Enable Skeleton ESP", false, function(state)
-    ESP.skeletonEnabled = state
-    notifyWithCooldown("Skeleton ESP " .. (state and "Enabled" or "Disabled"), 3)
-end)
+    local skeletonSection = espTab:Section("Skeleton ESP Settings")
+    skeletonSection:Toggle("Enable Skeleton ESP", function(state)
+        ESP.skeletonEnabled = state
+        notifyWithCooldown("Skeleton ESP " .. (state and "Enabled" or "Disabled"), 3)
+    end)
 
--- Секция: X-Ray Settings
-Lib.Menu:AddSection(espTab, "X-Ray Settings")
-Lib.Menu:AddToggle(espTab, "Enable X-Ray", false, function(state)
-    ESP.xrayEnabled = state
-    notifyWithCooldown("X-Ray " .. (state and "Enabled" or "Disabled"), 3)
-end)
-Lib.Menu:AddColorPicker(espTab, "X-Ray Color", ESP.xrayColor, function(color)
-    ESP.xrayColor = color
-    notifyWithCooldown("X-Ray color updated", 3)
-end)
+    -- Секция: X-Ray Settings
+    local xraySection = espTab:Section("X-Ray Settings")
+    xraySection:Toggle("Enable X-Ray", function(state)
+        ESP.xrayEnabled = state
+        notifyWithCooldown("X-Ray " .. (state and "Enabled" or "Disabled"), 3)
+    end)
+    xraySection:TextBox("X-Ray Color (R,G,B)", "255,255,255", function(input)
+        local r, g, b = input:match("(%d+),(%d+),(%d+)")
+        if r and g and b then
+            r, g, b = tonumber(r), tonumber(g), tonumber(b)
+            if r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255 then
+                ESP.xrayColor = Color3.fromRGB(r, g, b)
+                notifyWithCooldown("X-Ray color updated", 3)
+            else
+                notifyWithCooldown("Invalid RGB values (0-255)", 3)
+            end
+        else
+            notifyWithCooldown("Invalid format. Use: R,G,B (e.g., 255,255,255)", 3)
+        end
+    end)
 
     -- Секция: Text Settings
-    Lib.Menu:AddSection(espTab, "Text Settings")
-    Lib.Menu:AddSlider(espTab, "Text Size", 8, 20, 10, function(value)
+    local textSection = espTab:Section("Text Settings")
+    textSection:Slider("Text Size", 8, 20, function(value)
         ESP.textSize = value
         notifyWithCooldown("Text Size set to: " .. value, 3)
     end)
 
     -- Секция: Colors
-    Lib.Menu:AddSection(espTab, "Colors")
-    Lib.Menu:AddColorPicker(espTab, "Visible Color", ESP.espVisibleColor, function(color)
-        ESP.espVisibleColor = color
-        notifyWithCooldown("Visible ESP color updated", 3)
+    local colorsSection = espTab:Section("Colors")
+    colorsSection:TextBox("Visible Color (R,G,B)", "255,255,255", function(input)
+        local r, g, b = input:match("(%d+),(%d+),(%d+)")
+        if r and g and b then
+            r, g, b = tonumber(r), tonumber(g), tonumber(b)
+            if r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255 then
+                ESP.espVisibleColor = Color3.fromRGB(r, g, b)
+                notifyWithCooldown("Visible ESP color updated", 3)
+            else
+                notifyWithCooldown("Invalid RGB values (0-255)", 3)
+            end
+        else
+            notifyWithCooldown("Invalid format. Use: R,G,B (e.g., 255,255,255)", 3)
+        end
     end)
-    Lib.Menu:AddColorPicker(espTab, "Not Visible Color", ESP.espNotVisibleColor, function(color)
-        ESP.espNotVisibleColor = color
-        notifyWithCooldown("Not Visible ESP color updated", 3)
+    colorsSection:TextBox("Not Visible Color (R,G,B)", "255,0,0", function(input)
+        local r, g, b = input:match("(%d+),(%d+),(%d+)")
+        if r and g and b then
+            r, g, b = tonumber(r), tonumber(g), tonumber(b)
+            if r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255 then
+                ESP.espNotVisibleColor = Color3.fromRGB(r, g, b)
+                notifyWithCooldown("Not Visible ESP color updated", 3)
+            else
+                notifyWithCooldown("Invalid RGB values (0-255)", 3)
+            end
+        else
+            notifyWithCooldown("Invalid format. Use: R,G,B (e.g., 255,0,0)", 3)
+        end
     end)
 end
-
--- Горячая клавиша для показа/скрытия меню (Right Control)
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        if menu.Visible then
-            Lib.Menu:HideMenu(menu)
-        else
-            Lib.Menu:ShowMenu(menu)
-        end
-    end
-end)
 
 -- Поддержка новой системы чата (TextChatService)
 local TextChatService = game:GetService("TextChatService")
@@ -648,18 +689,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Функция для обработки команды /tp
 local function handleChatCommand(message)
-    -- Приводим сообщение к нижнему регистру для игнорирования регистра
     local lowerMessage = message:lower()
-    
-    -- Проверяем, начинается ли сообщение с го
     if lowerMessage:find("^го%s+") then
-        -- Извлекаем ник после г
         local playerName = message:match("^го%s+(.+)$")
         if playerName then
-            -- Убираем пробелы в начале и конце
             playerName = playerName:match("^%s*(.-)%s*$")
             if playerName ~= "" then
-                -- Вызываем существующую функцию телепортации
                 teleportToPlayer(playerName)
             else
                 notifyWithCooldown("Please provide a player name after го", 3)
@@ -672,7 +707,6 @@ end
 
 -- Проверяем, какая система чата используется
 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-    -- Новая система чата (TextChatService)
     TextChatService.MessageReceived:Connect(function(messageData)
         local speaker = messageData.TextSource
         if speaker then
@@ -683,7 +717,6 @@ if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
         end
     end)
 else
-    -- Старая система чата (DefaultChatSystemChatEvents)
     local chatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 5)
     if chatEvents then
         chatEvents.OnMessageDoneFiltering:Connect(function(messageData)
