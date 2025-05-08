@@ -20,10 +20,10 @@ local function loadLibrary()
         print("Библиотека загружена успешно. Тип результата:", type(result))
         if type(result) == "table" then
             print("Содержимое библиотеки:", result)
-            print("Наличие Menu:", result.Menu)
+            print("Наличие Menu:", result.Menu ~= nil)
             if result.Menu then
                 print("Методы Menu:", result.Menu)
-                print("Наличие Notify:", result.Menu.Notify)
+                print("Наличие Notify:", type(result.Menu.Notify) == "function")
             end
             return result
         else
@@ -38,8 +38,19 @@ end
 
 Lib = loadLibrary()
 if not Lib or not Lib.Menu or type(Lib.Menu.Notify) ~= "function" then
-    warn("Библиотека не загружена или не содержит метод Menu.Notify. Скрипт остановлен.")
+    warn("Библиотека не загружена или не содержит метод Menu.Notify. Скрипт остановлен. Проверьте URL или содержимое файла.")
     return
+end
+
+-- Защита от перезаписи Notify
+local originalNotify = Lib.Menu.Notify
+local function safeNotify(message, duration)
+    if type(originalNotify) == "function" then
+        print("Вызов safeNotify: сообщение =", message, ", длительность =", duration)
+        originalNotify(Lib.Menu, message, duration)
+    else
+        warn("Метод Notify недоступен во время вызова: " .. tostring(message))
+    end
 end
 
 -- Функция для загрузки модулей с повторными попытками
@@ -53,7 +64,9 @@ local function loadModule(url, moduleName, retries, delay)
         end)
         if success and result then
             module = result
-            Lib.Menu:Notify("Модуль " .. moduleName .. " успешно загружен", 3)
+            -- Проверка перед вызовом Notify
+            print("Перед вызовом Notify для модуля " .. moduleName .. ": type(originalNotify) =", type(originalNotify))
+            safeNotify("Модуль " .. moduleName .. " успешно загружен", 3)
             break
         else
             warn("Попытка " .. i .. " не удалась для " .. moduleName .. ": " .. tostring(result))
@@ -63,7 +76,7 @@ local function loadModule(url, moduleName, retries, delay)
         end
     end
     if not module then
-        Lib.Menu:Notify("Не удалось загрузить модуль " .. moduleName .. " после " .. retries .. " попыток", 5)
+        safeNotify("Не удалось загрузить модуль " .. moduleName .. " после " .. retries .. " попыток", 5)
     end
     return module
 end
@@ -98,7 +111,7 @@ local notificationCooldown = 1
 local function notify(message, duration)
     local currentTime = tick()
     if currentTime - lastNotificationTime >= notificationCooldown then
-        Lib.Menu:Notify(message, duration or 3)
+        safeNotify(message, duration or 3)
         lastNotificationTime = currentTime
     end
 end
