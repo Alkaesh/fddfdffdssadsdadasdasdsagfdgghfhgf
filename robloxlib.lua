@@ -1,596 +1,595 @@
--- robloxlib.lua
+-- CheatMenuLibrary.lua
+-- Многофункциональная библиотека для создания красивого чит-меню в Roblox
+local CheatMenuLibrary = {}
+CheatMenuLibrary.__index = CheatMenuLibrary
 
-local Lib = {}
+-- Сервисы Roblox
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
 
--- Основные настройки UI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "CheatMenu"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
--- Основной фрейм меню
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 450, 0, 350)
-mainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.BorderSizePixel = 0
-mainFrame.ClipsDescendants = true
-mainFrame.Parent = screenGui
-
--- Тень для основного фрейма
-local shadow = Instance.new("ImageLabel")
-shadow.Size = UDim2.new(1, 20, 1, 20)
-shadow.Position = UDim2.new(0, -10, 0, -10)
-shadow.BackgroundTransparency = 1
-shadow.Image = "rbxassetid://1316045217"
-shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-shadow.ImageTransparency = 0.6
-shadow.ScaleType = Enum.ScaleType.Slice
-shadow.SliceCenter = Rect.new(10, 10, 10, 10)
-shadow.Parent = mainFrame
-
--- Заголовок меню
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
-titleLabel.Position = UDim2.new(0, 0, 0, 0)
-titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-titleLabel.Text = "Cheat Menu"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 18
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.BorderSizePixel = 0
-titleLabel.Parent = mainFrame
-
--- Кнопка закрытия
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 30, 0, 30)
-closeButton.Position = UDim2.new(1, -35, 0, 5)
-closeButton.BackgroundTransparency = 1
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 50, 50)
-closeButton.TextSize = 16
-closeButton.Font = Enum.Font.SourceSansBold
-closeButton.Parent = titleLabel
-
--- Контейнер для вкладок (слева)
-local tabContainer = Instance.new("Frame")
-tabContainer.Size = UDim2.new(0, 120, 1, -40)
-tabContainer.Position = UDim2.new(0, 0, 0, 40)
-tabContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-tabContainer.BorderSizePixel = 0
-tabContainer.Parent = mainFrame
-
--- Контейнер для содержимого вкладок (справа)
-local contentContainer = Instance.new("Frame")
-contentContainer.Size = UDim2.new(1, -120, 1, -40)
-contentContainer.Position = UDim2.new(0, 120, 0, 40)
-contentContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-contentContainer.BorderSizePixel = 0
-contentContainer.Parent = mainFrame
-
--- UIListLayout для вкладок
-local tabListLayout = Instance.new("UIListLayout")
-tabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tabListLayout.Padding = UDim.new(0, 5)
-tabListLayout.Parent = tabContainer
-
--- UIPadding для вкладок
-local tabPadding = Instance.new("UIPadding")
-tabPadding.PaddingTop = UDim.new(0, 5)
-tabPadding.Parent = tabContainer
-
--- Создаем поле Menu внутри Lib
-Lib.Menu = {}
-
--- Функция для создания меню
-function Lib.Menu:CreateMenu(title)
-    titleLabel.Text = title
-    local menu = {
-        Visible = true,
-        Tabs = {},
-        CurrentTab = nil
+-- Создание нового экземпляра меню
+function CheatMenuLibrary.new(config)
+    local self = setmetatable({}, CheatMenuLibrary)
+    
+    -- Конфигурация по умолчанию
+    self.config = {
+        title = config.title or "Elite Cheat Menu",
+        theme = config.theme or {
+            primaryColor = Color3.fromRGB(30, 144, 255),
+            secondaryColor = Color3.fromRGB(25, 25, 25),
+            textColor = Color3.fromRGB(255, 255, 255),
+            accentColor = Color3.fromRGB(255, 69, 0),
+            gradient = {Color3.fromRGB(30, 144, 255), Color3.fromRGB(0, 255, 127)}
+        },
+        keybind = config.keybind or Enum.KeyCode.F9,
+        draggable = config.draggable ~= false,
+        animationSpeed = config.animationSpeed or 0.3,
+        shadowEnabled = config.shadowEnabled ~= false
     }
-
-    -- Обработчик кнопки закрытия
-    closeButton.MouseButton1Click:Connect(function()
-        Lib.Menu:HideMenu(menu)
-    end)
-
-    return menu
+    
+    self.tabs = {}
+    self.currentTab = nil
+    self.isOpen = false
+    
+    -- Инициализация UI
+    self:InitUI()
+    self:SetupKeybind()
+    return self
 end
 
--- Функция для показа/скрытия меню с анимацией
-function Lib.Menu:ShowMenu(menu)
-    menu.Visible = true
-    mainFrame.Visible = true
-    mainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
-    local tween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -225, 0.5, -175)})
+-- Инициализация пользовательского интерфейса
+function CheatMenuLibrary:InitUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "CheatMenu"
+    ScreenGui.Parent = LocalPlayer.PlayerGui
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.IgnoreGuiInset = true
+    self.ScreenGui = ScreenGui
+    
+    -- Главный фрейм
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 350, 0, 450)
+    MainFrame.Position = UDim2.new(0.5, -175, 0.5, -225)
+    MainFrame.BackgroundColor3 = self.config.theme.secondaryColor
+    MainFrame.BorderSizePixel = 0
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = ScreenGui
+    self.MainFrame = MainFrame
+    
+    -- Закругленные углы
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.Parent = MainFrame
+    
+    -- Тень
+    if self.config.shadowEnabled then
+        local Shadow = Instance.new("ImageLabel")
+        Shadow.Size = UDim2.new(1, 20, 1, 20)
+        Shadow.Position = UDim2.new(0, -10, 0, -10)
+        Shadow.BackgroundTransparency = 1
+        Shadow.Image = "rbxassetid://1316045217"
+        Shadow.ImageTransparency = 0.5
+        Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+        Shadow.ScaleType = Enum.ScaleType.Slice
+        Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+        Shadow.Parent = MainFrame
+    end
+    
+    -- Заголовок
+    local TitleFrame = Instance.new("Frame")
+    TitleFrame.Size = UDim2.new(1, 0, 0, 50)
+    TitleFrame.BackgroundColor3 = self.config.theme.primaryColor
+    TitleFrame.Parent = MainFrame
+    
+    local TitleGradient = Instance.new("UIGradient")
+    TitleGradient.Color = ColorSequence.new(self.config.theme.gradient)
+    TitleGradient.Parent = TitleFrame
+    
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+    TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = self.config.title
+    TitleLabel.TextColor3 = self.config.theme.textColor
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.TextSize = 18
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLabel.Parent = TitleFrame
+    
+    -- Кнопка закрытия
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    CloseButton.Position = UDim2.new(1, -40, 0, 10)
+    CloseButton.BackgroundColor3 = self.config.theme.accentColor
+    CloseButton.Text = "X"
+    CloseButton.TextColor3 = self.config.theme.textColor
+    CloseButton.Font = Enum.Font.Gotham
+    CloseButton.TextSize = 14
+    CloseButton.Parent = TitleFrame
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 8)
+    CloseCorner.Parent = CloseButton
+    
+    -- Панель вкладок
+    local TabBar = Instance.new("Frame")
+    TabBar.Size = UDim2.new(1, 0, 0, 40)
+    TabBar.Position = UDim2.new(0, 0, 0, 50)
+    TabBar.BackgroundColor3 = self.config.theme.secondaryColor
+    TabBar.Parent = MainFrame
+    self.TabBar = TabBar
+    
+    local TabLayout = Instance.new("UIListLayout")
+    TabLayout.FillDirection = Enum.FillDirection.Horizontal
+    TabLayout.Padding = UDim.new(0, 5)
+    TabLayout.Parent = TabBar
+    
+    -- Контейнер для содержимого вкладок
+    local TabContainer = Instance.new("Frame")
+    TabContainer.Size = UDim2.new(1, -10, 1, -100)
+    TabContainer.Position = UDim2.new(0, 5, 0, 95)
+    TabContainer.BackgroundTransparency = 1
+    TabContainer.ClipsDescendants = true
+    TabContainer.Parent = MainFrame
+    self.TabContainer = TabContainer
+    
+    -- Делаем меню перетаскиваемым
+    if self.config.draggable then
+        self:MakeDraggable(MainFrame, TitleFrame)
+    end
+    
+    -- Обработчик кнопки закрытия
+    CloseButton.MouseButton1Click:Connect(function()
+        self:Close()
+    end)
+    
+    -- Начальное состояние - скрыто
+    MainFrame.Visible = false
+end
+
+-- Настройка горячей клавиши
+function CheatMenuLibrary:SetupKeybind()
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == self.config.keybind then
+            if self.isOpen then
+                self:Close()
+            else
+                self:Open()
+            end
+        end
+    end)
+end
+
+-- Открытие меню
+function CheatMenuLibrary:Open()
+    if self.isOpen then return end
+    self.isOpen = true
+    self.MainFrame.Visible = true
+    
+    local tweenInfo = TweenInfo.new(self.config.animationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+    self.MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    local tween = TweenService:Create(self.MainFrame, tweenInfo, {Size = UDim2.new(0, 350, 0, 450)})
     tween:Play()
 end
 
-function Lib.Menu:HideMenu(menu)
-    menu.Visible = false
-    local tween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -225, 0.5, 100)})
+-- Закрытие меню
+function CheatMenuLibrary:Close()
+    if not self.isOpen then return end
+    self.isOpen = false
+    
+    local tweenInfo = TweenInfo.new(self.config.animationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+    local tween = TweenService:Create(self.MainFrame, tweenInfo, {Size = UDim2.new(0, 350, 0, 0)})
     tween:Play()
     tween.Completed:Connect(function()
-        mainFrame.Visible = false
+        self.MainFrame.Visible = false
+        self.MainFrame.Size = UDim2.new(0, 350, 0, 450)
     end)
 end
 
--- Функция для добавления вкладки
-function Lib.Menu:AddTab(menu, tabName)
-    -- Создаем кнопку вкладки
-    local tabButton = Instance.new("TextButton")
-    tabButton.Size = UDim2.new(1, 0, 0, 35)
-    tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    tabButton.Text = tabName
-    tabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-    tabButton.TextSize = 16
-    tabButton.Font = Enum.Font.SourceSans
-    tabButton.BorderSizePixel = 0
-    tabButton.Parent = tabContainer
-
-    -- Эффект наведения
-    tabButton.MouseEnter:Connect(function()
-        if menu.CurrentTab ~= tab then
-            tabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        end
-    end)
-    tabButton.MouseLeave:Connect(function()
-        if menu.CurrentTab ~= tab then
-            tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        end
-    end)
-
-    -- Создаем ScrollingFrame для содержимого вкладки
-    local tabContent = Instance.new("ScrollingFrame")
-    tabContent.Size = UDim2.new(1, 0, 1, 0)
-    tabContent.Position = UDim2.new(0, 0, 0, 0)
-    tabContent.BackgroundTransparency = 1
-    tabContent.BorderSizePixel = 0
-    tabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
-    tabContent.ScrollBarThickness = 6
-    tabContent.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-    tabContent.Visible = false
-    tabContent.Parent = contentContainer
-
-    -- UIListLayout для содержимого вкладки
-    local contentListLayout = Instance.new("UIListLayout")
-    contentListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentListLayout.Padding = UDim.new(0, 5)
-    contentListLayout.Parent = tabContent
-
-    -- UIPadding для содержимого
-    local contentPadding = Instance.new("UIPadding")
-    contentPadding.PaddingLeft = UDim.new(0, 10)
-    contentPadding.PaddingRight = UDim.new(0, 10)
-    contentPadding.PaddingTop = UDim.new(0, 10)
-    contentPadding.PaddingBottom = UDim.new(0, 10)
-    contentPadding.Parent = tabContent
-
-    -- Обновляем CanvasSize при изменении содержимого
-    contentListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        tabContent.CanvasSize = UDim2.new(0, 0, 0, contentListLayout.AbsoluteContentSize.Y + 20)
-    end)
-
-    local tab = {
-        Name = tabName,
-        Button = tabButton,
-        Content = tabContent,
-        Elements = {}
-    }
-    table.insert(menu.Tabs, tab)
-
-    -- Переключение вкладок
-    tabButton.MouseButton1Click:Connect(function()
-        if menu.CurrentTab then
-            menu.CurrentTab.Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            menu.CurrentTab.Button.TextColor3 = Color3.fromRGB(200, 200, 200)
-            menu.CurrentTab.Content.Visible = false
-        end
-        menu.CurrentTab = tab
-        tab.Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        tab.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        tab.Content.Visible = true
-    end)
-
-    -- Устанавливаем первую вкладку активной
-    if not menu.CurrentTab then
-        menu.CurrentTab = tab
-        tab.Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        tab.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        tab.Content.Visible = true
+-- Создание перетаскиваемого фрейма
+function CheatMenuLibrary:MakeDraggable(frame, handle)
+    local dragging = false
+    local dragInput, dragStart, startPos
+    
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
+    
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    handle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            updateInput(input)
+        end
+    end)
+end
 
+-- Добавление вкладки
+function CheatMenuLibrary:AddTab(name)
+    local tab = {}
+    tab.name = name
+    
+    -- Кнопка вкладки
+    local TabButton = Instance.new("TextButton")
+    TabButton.Size = UDim2.new(0, 80, 1, 0) -- Увеличена высота кнопки
+    TabButton.BackgroundColor3 = self.config.theme.primaryColor
+    TabButton.Text = name
+    TabButton.TextColor3 = self.config.theme.textColor
+    TabButton.Font = Enum.Font.Gotham
+    TabButton.TextSize = 14
+    TabButton.Parent = self.TabBar
+    
+    local TabCorner = Instance.new("UICorner")
+    TabCorner.CornerRadius = UDim.new(0, 8)
+    TabCorner.Parent = TabButton
+    
+    local TabGradient = Instance.new("UIGradient")
+    TabGradient.Color = ColorSequence.new(self.config.theme.gradient)
+    TabGradient.Enabled = false
+    TabGradient.Parent = TabButton
+    
+    -- Контейнер для элементов вкладки
+    local TabContent = Instance.new("ScrollingFrame")
+    TabContent.Size = UDim2.new(1, 0, 1, 0)
+    TabContent.BackgroundTransparency = 1
+    TabContent.ScrollBarThickness = 4
+    TabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
+    TabContent.Visible = false
+    TabContent.Parent = self.TabContainer
+    tab.content = TabContent
+    
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.Padding = UDim.new(0, 5)
+    UIListLayout.Parent = TabContent
+    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        TabContent.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+    end)
+    
+    -- Обработчик переключения вкладки
+    TabButton.MouseButton1Click:Connect(function()
+        self:SwitchTab(tab)
+    end)
+    
+    self.tabs[name] = tab
+    if not self.currentTab then
+        self:SwitchTab(tab)
+    end
+    
     return tab
 end
 
--- Функция для добавления секции
-function Lib.Menu:AddSection(tab, sectionName)
-    local sectionFrame = Instance.new("Frame")
-    sectionFrame.Size = UDim2.new(1, 0, 0, 30)
-    sectionFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    sectionFrame.BorderSizePixel = 0
-    sectionFrame.Parent = tab.Content
-
-    local sectionLabel = Instance.new("TextLabel")
-    sectionLabel.Size = UDim2.new(1, -10, 1, 0)
-    sectionLabel.Position = UDim2.new(0, 5, 0, 0)
-    sectionLabel.BackgroundTransparency = 1
-    sectionLabel.Text = sectionName
-    sectionLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-    sectionLabel.TextSize = 16
-    sectionLabel.Font = Enum.Font.SourceSansBold
-    sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-    sectionLabel.TextYAlignment = Enum.TextYAlignment.Center
-    sectionLabel.Parent = sectionFrame
-
-    table.insert(tab.Elements, sectionFrame)
+-- Переключение вкладки
+function CheatMenuLibrary:SwitchTab(tab)
+    if self.currentTab == tab then return end
+    
+    -- Скрываем текущую вкладку
+    if self.currentTab then
+        self.currentTab.content.Visible = false
+        for _, child in pairs(self.TabBar:GetChildren()) do
+            if child:IsA("TextButton") and child.Text == self.currentTab.name then
+                child:FindFirstChildOfClass("UIGradient").Enabled = false
+            end
+        end
+    end
+    
+    -- Показываем новую вкладку
+    self.currentTab = tab
+    tab.content.Visible = true
+    for _, child in pairs(self.TabBar:GetChildren()) do
+        if child:IsA("TextButton") and child.Text == tab.name then
+            child:FindFirstChildOfClass("UIGradient").Enabled = true
+        end
+    end
 end
 
--- Функция для добавления переключателя
-function Lib.Menu:AddToggle(tab, name, default, callback)
-    local toggleFrame = Instance.new("Frame")
-    toggleFrame.Size = UDim2.new(1, 0, 0, 30)
-    toggleFrame.BackgroundTransparency = 1
-    toggleFrame.Parent = tab.Content
-
-    local toggleLabel = Instance.new("TextLabel")
-    toggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
-    toggleLabel.BackgroundTransparency = 1
-    toggleLabel.Text = name
-    toggleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    toggleLabel.TextSize = 14
-    toggleLabel.Font = Enum.Font.SourceSans
-    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    toggleLabel.TextYAlignment = Enum.TextYAlignment.Center
-    toggleLabel.Parent = toggleFrame
-
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Size = UDim2.new(0, 50, 0, 20)
-    toggleButton.Position = UDim2.new(1, -50, 0.5, -10)
-    toggleButton.BackgroundColor3 = default and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
-    toggleButton.Text = default and "ON" or "OFF"
-    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleButton.TextSize = 12
-    toggleButton.Font = Enum.Font.SourceSans
-    toggleButton.BorderSizePixel = 0
-    toggleButton.Parent = toggleFrame
-
-    -- Закругленные углы для кнопки
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 5)
-    corner.Parent = toggleButton
-
-    local toggleState = default
-    toggleButton.MouseButton1Click:Connect(function()
-        toggleState = not toggleState
-        toggleButton.BackgroundColor3 = toggleState and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
-        toggleButton.Text = toggleState and "ON" or "OFF"
-        callback(toggleState)
-    end)
-
-    table.insert(tab.Elements, toggleFrame)
+-- Добавление вкладки профиля
+function CheatMenuLibrary:AddProfileTab()
+    local tab = self:AddTab("Profile")
+    
+    -- Аватарка
+    local AvatarImage = Instance.new("ImageLabel")
+    AvatarImage.Size = UDim2.new(0, 100, 0, 100)
+    AvatarImage.Position = UDim2.new(0.5, -50, 0, 10)
+    AvatarImage.BackgroundTransparency = 1
+    AvatarImage.Image = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+    AvatarImage.Parent = tab.content
+    
+    local AvatarCorner = Instance.new("UICorner")
+    AvatarCorner.CornerRadius = UDim.new(1, 0)
+    AvatarCorner.Parent = AvatarImage
+    
+    -- Ник
+    local NameLabel = Instance.new("TextLabel")
+    NameLabel.Size = UDim2.new(1, -10, 0, 30)
+    NameLabel.Position = UDim2.new(0, 5, 0, 120)
+    NameLabel.BackgroundTransparency = 1
+    NameLabel.Text = "Name: " .. LocalPlayer.Name
+    NameLabel.TextColor3 = self.config.theme.textColor
+    NameLabel.Font = Enum.Font.GothamBold
+    NameLabel.TextSize = 16
+    NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    NameLabel.Parent = tab.content
+    
+    -- ID игрока
+    local IdLabel = Instance.new("TextLabel")
+    IdLabel.Size = UDim2.new(1, -10, 0, 30)
+    IdLabel.Position = UDim2.new(0, 5, 0, 150)
+    IdLabel.BackgroundTransparency = 1
+    IdLabel.Text = "User ID: " .. LocalPlayer.UserId
+    IdLabel.TextColor3 = self.config.theme.textColor
+    IdLabel.Font = Enum.Font.Gotham
+    IdLabel.TextSize = 14
+    IdLabel.TextXAlignment = Enum.TextXAlignment.Left
+    IdLabel.Parent = tab.content
+    
+    -- Кастомная информация
+    local CustomInfo = Instance.new("TextLabel")
+    CustomInfo.Size = UDim2.new(1, -10, 0, 30)
+    CustomInfo.Position = UDim2.new(0, 5, 0, 180)
+    CustomInfo.BackgroundTransparency = 1
+    CustomInfo.Text = "Status: Active"
+    CustomInfo.TextColor3 = self.config.theme.textColor
+    CustomInfo.Font = Enum.Font.Gotham
+    CustomInfo.TextSize = 14
+    CustomInfo.TextXAlignment = Enum.TextXAlignment.Left
+    CustomInfo.Parent = tab.content
 end
 
--- Функция для добавления слайдера
-function Lib.Menu:AddSlider(tab, name, min, max, default, callback)
-    local sliderFrame = Instance.new("Frame")
-    sliderFrame.Size = UDim2.new(1, 0, 0, 50)
-    sliderFrame.BackgroundTransparency = 1
-    sliderFrame.Parent = tab.Content
-
-    local sliderLabel = Instance.new("TextLabel")
-    sliderLabel.Size = UDim2.new(1, 0, 0, 20)
-    sliderLabel.BackgroundTransparency = 1
-    sliderLabel.Text = name .. ": " .. default
-    sliderLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    sliderLabel.TextSize = 14
-    sliderLabel.Font = Enum.Font.SourceSans
-    sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-    sliderLabel.TextYAlignment = Enum.TextYAlignment.Center
-    sliderLabel.Parent = sliderFrame
-
-    local sliderBar = Instance.new("Frame")
-    sliderBar.Size = UDim2.new(1, 0, 0, 10)
-    sliderBar.Position = UDim2.new(0, 0, 0, 30)
-    sliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    sliderBar.BorderSizePixel = 0
-    sliderBar.Parent = sliderFrame
-
-    -- Закругленные углы для полосы слайдера
-    local barCorner = Instance.new("UICorner")
-    barCorner.CornerRadius = UDim.new(0, 5)
-    barCorner.Parent = sliderBar
-
-    local fillBar = Instance.new("Frame")
-    fillBar.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fillBar.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    fillBar.BorderSizePixel = 0
-    fillBar.Parent = sliderBar
-
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 5)
-    fillCorner.Parent = fillBar
-
-    local sliderButton = Instance.new("TextButton")
-    sliderButton.Size = UDim2.new(0, 20, 0, 20)
-    sliderButton.Position = UDim2.new((default - min) / (max - min), -10, 0, -5)
-    sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    sliderButton.Text = ""
-    sliderButton.BorderSizePixel = 0
-    sliderButton.Parent = sliderBar
-
-    local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(0, 10)
-    buttonCorner.Parent = sliderButton
-
-    local isDragging = false
-    sliderButton.MouseButton1Down:Connect(function()
-        isDragging = true
+-- Добавление кнопки
+function CheatMenuLibrary:AddButton(tab, name, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(1, 0, 0, 35)
+    Button.BackgroundColor3 = self.config.theme.primaryColor
+    Button.Text = name
+    Button.TextColor3 = self.config.theme.textColor
+    Button.Font = Enum.Font.Gotham
+    Button.TextSize = 14
+    Button.Parent = tab:IsA("Frame") and tab or tab.content
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = Button
+    
+    local ButtonGradient = Instance.new("UIGradient")
+    ButtonGradient.Color = ColorSequence.new(self.config.theme.gradient)
+    ButtonGradient.Enabled = false
+    ButtonGradient.Parent = Button
+    
+    Button.MouseEnter:Connect(function()
+        ButtonGradient.Enabled = true
     end)
+    
+    Button.MouseLeave:Connect(function()
+        ButtonGradient.Enabled = false
+    end)
+    
+    Button.MouseButton1Click:Connect(function()
+        callback()
+    end)
+end
 
-    UserInputService.InputEnded:Connect(function(input)
+-- Добавление переключателя
+function CheatMenuLibrary:AddToggle(tab, name, default, callback)
+    local ToggleFrame = Instance.new("Frame")
+    ToggleFrame.Size = UDim2.new(1, 0, 0, 35)
+    ToggleFrame.BackgroundColor3 = self.config.theme.primaryColor
+    ToggleFrame.Parent = tab:IsA("Frame") and tab or tab.content
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = ToggleFrame
+    
+    local ToggleLabel = Instance.new("TextLabel")
+    ToggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+    ToggleLabel.BackgroundTransparency = 1
+    ToggleLabel.Text = name
+    ToggleLabel.TextColor3 = self.config.theme.textColor
+    ToggleLabel.Font = Enum.Font.Gotham
+    ToggleLabel.TextSize = 14
+    ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    ToggleLabel.Parent = ToggleFrame
+    
+    local ToggleButton = Instance.new("TextButton")
+    ToggleButton.Size = UDim2.new(0, 40, 0, 20)
+    ToggleButton.Position = UDim2.new(1, -45, 0.5, -10)
+    ToggleButton.BackgroundColor3 = default and self.config.theme.accentColor or Color3.fromRGB(100, 100, 100)
+    ToggleButton.Text = ""
+    ToggleButton.Parent = ToggleFrame
+    
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(0, 10)
+    ToggleCorner.Parent = ToggleButton
+    
+    local state = default
+    ToggleButton.MouseButton1Click:Connect(function()
+        state = not state
+        local tweenInfo = TweenInfo.new(self.config.animationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+        local goal = state and {BackgroundColor3 = self.config.theme.accentColor} or {BackgroundColor3 = Color3.fromRGB(100, 100, 100)}
+        local tween = TweenService:Create(ToggleButton, tweenInfo, goal)
+        tween:Play()
+        callback(state)
+    end)
+end
+
+-- Добавление слайдера
+function CheatMenuLibrary:AddSlider(tab, name, min, max, default, callback)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Size = UDim2.new(1, 0, 0, 50)
+    SliderFrame.BackgroundColor3 = self.config.theme.primaryColor
+    SliderFrame.Parent = tab:IsA("Frame") and tab or tab.content
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = SliderFrame
+    
+    local SliderLabel = Instance.new("TextLabel")
+    SliderLabel.Size = UDim2.new(1, 0, 0, 20)
+    SliderLabel.BackgroundTransparency = 1
+    SliderLabel.Text = name .. ": " .. default
+    SliderLabel.TextColor3 = self.config.theme.textColor
+    SliderLabel.Font = Enum.Font.Gotham
+    SliderLabel.TextSize = 14
+    SliderLabel.Parent = SliderFrame
+    
+    local SliderBar = Instance.new("Frame")
+    SliderBar.Size = UDim2.new(1, -20, 0, 10)
+    SliderBar.Position = UDim2.new(0, 10, 0, 30)
+    SliderBar.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    SliderBar.Parent = SliderFrame
+    
+    local SliderCorner = Instance.new("UICorner")
+    SliderCorner.CornerRadius = UDim.new(0, 5)
+    SliderCorner.Parent = SliderBar
+    
+    local SliderFill = Instance.new("Frame")
+    SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    SliderFill.BackgroundColor3 = self.config.theme.accentColor
+    SliderFill.Parent = SliderBar
+    
+    local FillCorner = Instance.new("UICorner")
+    FillCorner.CornerRadius = UDim.new(0, 5)
+    FillCorner.Parent = SliderFill
+    
+    local dragging = false
+    SliderBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isDragging = false
+            dragging = true
         end
     end)
-
+    
+    SliderBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
     UserInputService.InputChanged:Connect(function(input)
-        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mousePos = UserInputService:GetMouseLocation()
-            local relativePos = mousePos - sliderBar.AbsolutePosition
-            local fraction = math.clamp(relativePos.X / sliderBar.AbsoluteSize.X, 0, 1)
-            local value = min + (max - min) * fraction
-            value = math.floor(value)
-            value = math.clamp(value, min, max)
-
-            fillBar.Size = UDim2.new(fraction, 0, 1, 0)
-            sliderButton.Position = UDim2.new(fraction, -10, 0, -5)
-            sliderLabel.Text = name .. ": " .. value
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mouseX = input.Position.X
+            local barX = SliderBar.AbsolutePosition.X
+            local barWidth = SliderBar.AbsoluteSize.X
+            local ratio = math.clamp((mouseX - barX) / barWidth, 0, 1)
+            local value = min + (max - min) * ratio
+            value = math.floor(value + 0.5)
+            SliderFill.Size = UDim2.new(ratio, 0, 1, 0)
+            SliderLabel.Text = name .. ": " .. value
             callback(value)
         end
     end)
-
-    table.insert(tab.Elements, sliderFrame)
 end
 
--- Функция для добавления кнопки
-function Lib.Menu:AddButton(tab, name, callback)
-    local buttonFrame = Instance.new("Frame")
-    buttonFrame.Size = UDim2.new(1, 0, 0, 30)
-    buttonFrame.BackgroundTransparency = 1
-    buttonFrame.Parent = tab.Content
-
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 1, 0)
-    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    button.Text = name
-    button.TextColor3 = Color3.fromRGB(200, 200, 200)
-    button.TextSize = 14
-    button.Font = Enum.Font.SourceSans
-    button.BorderSizePixel = 0
-    button.Parent = buttonFrame
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 5)
-    corner.Parent = button
-
-    button.MouseButton1Click:Connect(callback)
-    button.MouseEnter:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    end)
-    button.MouseLeave:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    end)
-
-    table.insert(tab.Elements, buttonFrame)
-end
-
--- Функция для добавления текстового поля
-function Lib.Menu:AddTextBox(tab, name, default, callback)
-    local textBoxFrame = Instance.new("Frame")
-    textBoxFrame.Size = UDim2.new(1, 0, 0, 30)
-    textBoxFrame.BackgroundTransparency = 1
-    textBoxFrame.Parent = tab.Content
-
-    local textBoxLabel = Instance.new("TextLabel")
-    textBoxLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    textBoxLabel.BackgroundTransparency = 1
-    textBoxLabel.Text = name
-    textBoxLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    textBoxLabel.TextSize = 14
-    textBoxLabel.Font = Enum.Font.SourceSans
-    textBoxLabel.TextXAlignment = Enum.TextXAlignment.Left
-    textBoxLabel.TextYAlignment = Enum.TextYAlignment.Center
-    textBoxLabel.Parent = textBoxFrame
-
-    local textBox = Instance.new("TextBox")
-    textBox.Size = UDim2.new(0.5, 0, 0, 20)
-    textBox.Position = UDim2.new(0.5, 0, 0.5, -10)
-    textBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    textBox.Text = default
-    textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
-    textBox.TextSize = 14
-    textBox.Font = Enum.Font.SourceSans
-    textBox.BorderSizePixel = 0
-    textBox.Parent = textBoxFrame
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 5)
-    corner.Parent = textBox
-
-    textBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            callback(textBox.Text)
-        end
-    end)
-
-    table.insert(tab.Elements, textBoxFrame)
-
-    return textBox
-end
-
--- Функция для добавления выбора цвета
-function Lib.Menu:AddColorPicker(tab, name, defaultColor, callback)
-    local colorPickerFrame = Instance.new("Frame")
-    colorPickerFrame.Size = UDim2.new(1, 0, 0, 30)
-    colorPickerFrame.BackgroundTransparency = 1
-    colorPickerFrame.Parent = tab.Content
-
-    local colorPickerLabel = Instance.new("TextLabel")
-    colorPickerLabel.Size = UDim2.new(0.7, 0, 1, 0)
-    colorPickerLabel.BackgroundTransparency = 1
-    colorPickerLabel.Text = name
-    colorPickerLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    colorPickerLabel.TextSize = 14
-    colorPickerLabel.Font = Enum.Font.SourceSans
-    colorPickerLabel.TextXAlignment = Enum.TextXAlignment.Left
-    colorPickerLabel.TextYAlignment = Enum.TextYAlignment.Center
-    colorPickerLabel.Parent = colorPickerFrame
-
-    local colorButton = Instance.new("TextButton")
-    colorButton.Size = UDim2.new(0, 30, 0, 20)
-    colorButton.Position = UDim2.new(1, -30, 0.5, -10)
-    colorButton.BackgroundColor3 = defaultColor
-    colorButton.Text = ""
-    colorButton.BorderSizePixel = 0
-    colorButton.Parent = colorPickerFrame
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 5)
-    corner.Parent = colorButton
-
-    -- Простая реализация выбора цвета (можно заменить на полноценный ColorPicker)
-    colorButton.MouseButton1Click:Connect(function()
-        -- Здесь должен быть полноценный ColorPicker, но для примера используем случайный цвет
-        local newColor = Color3.fromRGB(math.random(0, 255), math.random(0, 255), math.random(0, 255))
-        colorButton.BackgroundColor3 = newColor
-        callback(newColor)
-    end)
-
-    table.insert(tab.Elements, colorPickerFrame)
-end
-
--- Функция для уведомлений
-function Lib.Menu:Notify(message, duration)
-    local notificationFrame = Instance.new("Frame")
-    notificationFrame.Size = UDim2.new(0, 250, 0, 60)
-    notificationFrame.Position = UDim2.new(1, -260, 1, -70)
-    notificationFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    notificationFrame.BorderSizePixel = 0
-    notificationFrame.Parent = screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 5)
-    corner.Parent = notificationFrame
-
-    local notificationLabel = Instance.new("TextLabel")
-    notificationLabel.Size = UDim2.new(1, -10, 1, -10)
-    notificationLabel.Position = UDim2.new(0, 5, 0, 5)
-    notificationLabel.BackgroundTransparency = 1
-    notificationLabel.Text = message
-    notificationLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    notificationLabel.TextSize = 14
-    notificationLabel.Font = Enum.Font.SourceSans
-    notificationLabel.TextWrapped = true
-    notificationLabel.TextXAlignment = Enum.TextXAlignment.Left
-    notificationLabel.TextYAlignment = Enum.TextYAlignment.Top
-    notificationLabel.Parent = notificationFrame
-
-    spawn(function()
-        wait(duration or 3)
-        local tween = TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(1, 0, 1, -70)})
-        tween:Play()
-        tween.Completed:Connect(function()
-            notificationFrame:Destroy()
-        end)
-    end)
-end
-
--- Функция для добавления выпадающего списка
-function Lib.Menu:AddDropdown(tab, name, options, default, callback)
-    local dropdownFrame = Instance.new("Frame")
-    dropdownFrame.Size = UDim2.new(1, 0, 0, 30)
-    dropdownFrame.BackgroundTransparency = 1
-    dropdownFrame.Parent = tab.Content
-
-    local dropdownLabel = Instance.new("TextLabel")
-    dropdownLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    dropdownLabel.BackgroundTransparency = 1
-    dropdownLabel.Text = name
-    dropdownLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    dropdownLabel.TextSize = 14
-    dropdownLabel.Font = Enum.Font.SourceSans
-    dropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
-    dropdownLabel.TextYAlignment = Enum.TextYAlignment.Center
-    dropdownLabel.Parent = dropdownFrame
-
-    local dropdownButton = Instance.new("TextButton")
-    dropdownButton.Size = UDim2.new(0.5, 0, 0, 20)
-    dropdownButton.Position = UDim2.new(0.5, 0, 0.5, -10)
-    dropdownButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    dropdownButton.Text = default or options[1]
-    dropdownButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-    dropdownButton.TextSize = 14
-    dropdownButton.Font = Enum.Font.SourceSans
-    dropdownButton.BorderSizePixel = 0
-    dropdownButton.Parent = dropdownFrame
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 5)
-    corner.Parent = dropdownButton
-
-    local dropdownList = Instance.new("Frame")
-    dropdownList.Size = UDim2.new(0.5, 0, 0, #options * 20)
-    dropdownList.Position = UDim2.new(0.5, 0, 1, 0)
-    dropdownList.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    dropdownList.BorderSizePixel = 0
-    dropdownList.Visible = false
-    dropdownList.Parent = dropdownFrame
-
-    local listCorner = Instance.new("UICorner")
-    listCorner.CornerRadius = UDim.new(0, 5)
-    listCorner.Parent = dropdownList
-
-    local listLayout = Instance.new("UIListLayout")
-    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    listLayout.Parent = dropdownList
-
-    for _, option in pairs(options) do
-        local optionButton = Instance.new("TextButton")
-        optionButton.Size = UDim2.new(1, 0, 0, 20)
-        optionButton.BackgroundTransparency = 1
-        optionButton.Text = option
-        optionButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-        optionButton.TextSize = 14
-        optionButton.Font = Enum.Font.SourceSans
-        optionButton.Parent = dropdownList
-
-        optionButton.MouseButton1Click:Connect(function()
-            dropdownButton.Text = option
-            dropdownList.Visible = false
+-- Добавление выпадающего списка
+function CheatMenuLibrary:AddDropdown(tab, name, options, default, callback)
+    local DropdownFrame = Instance.new("Frame")
+    DropdownFrame.Size = UDim2.new(1, 0, 0, 35)
+    DropdownFrame.BackgroundColor3 = self.config.theme.primaryColor
+    DropdownFrame.Parent = tab:IsA("Frame") and tab or tab.content
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = DropdownFrame
+    
+    local DropdownButton = Instance.new("TextButton")
+    DropdownButton.Size = UDim2.new(1, 0, 1, 0)
+    DropdownButton.BackgroundTransparency = 1
+    DropdownButton.Text = name .. ": " .. default
+    DropdownButton.TextColor3 = self.config.theme.textColor
+    DropdownButton.Font = Enum.Font.Gotham
+    DropdownButton.TextSize = 14
+    DropdownButton.TextXAlignment = Enum.TextXAlignment.Left
+    DropdownButton.Parent = DropdownFrame
+    
+    local isOpen = false
+    local DropdownList = Instance.new("Frame")
+    DropdownList.Size = UDim2.new(1, 0, 0, 0)
+    DropdownList.Position = UDim2.new(0, 0, 1, 5)
+    DropdownList.BackgroundColor3 = self.config.theme.secondaryColor
+    DropdownList.ClipsDescendants = true
+    DropdownList.Visible = false
+    DropdownList.Parent = DropdownFrame
+    
+    local ListCorner = Instance.new("UICorner")
+    ListCorner.CornerRadius = UDim.new(0, 8)
+    ListCorner.Parent = DropdownList
+    
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.Padding = UDim.new(0, 2)
+    ListLayout.Parent = DropdownList
+    
+    for i, option in ipairs(options) do
+        local OptionButton = Instance.new("TextButton")
+        OptionButton.Size = UDim2.new(1, -10, 0, 25)
+        OptionButton.BackgroundColor3 = self.config.theme.primaryColor
+        OptionButton.Text = option
+        OptionButton.TextColor3 = self.config.theme.textColor
+        OptionButton.Font = Enum.Font.Gotham
+        OptionButton.TextSize = 14
+        OptionButton.Parent = DropdownList
+        
+        local OptionCorner = Instance.new("UICorner")
+        OptionCorner.CornerRadius = UDim.new(0, 6)
+        OptionCorner.Parent = OptionButton
+        
+        OptionButton.MouseButton1Click:Connect(function()
+            DropdownButton.Text = name .. ": " .. option
+            isOpen = false
+            DropdownList.Visible = false
+            DropdownList.Size = UDim2.new(1, 0, 0, 0)
             callback(option)
         end)
-
-        optionButton.MouseEnter:Connect(function()
-            optionButton.BackgroundTransparency = 0
-            optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        end)
-        optionButton.MouseLeave:Connect(function()
-            optionButton.BackgroundTransparency = 1
-        end)
     end
-
-    dropdownButton.MouseButton1Click:Connect(function()
-        dropdownList.Visible = not dropdownList.Visible
+    
+    DropdownButton.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        DropdownList.Visible = isOpen
+        local tweenInfo = TweenInfo.new(self.config.animationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+        local goal = isOpen and {Size = UDim2.new(1, 0, 0, ListLayout.AbsoluteContentSize.Y)} or {Size = UDim2.new(1, 0, 0, 0)}
+        local tween = TweenService:Create(DropdownList, tweenInfo, goal)
+        tween:Play()
     end)
-
-    table.insert(tab.Elements, dropdownFrame)
 end
 
-return Lib
+-- Изменение темы
+function CheatMenuLibrary:SetTheme(theme)
+    self.config.theme = theme
+    self.MainFrame.BackgroundColor3 = theme.secondaryColor
+    for _, tab in pairs(self.tabs) do
+        for _, button in ipairs(tab.content:GetChildren()) do
+            if button:IsA("TextButton") or button:IsA("Frame") then
+                button.BackgroundColor3 = theme.primaryColor
+            end
+        end
+    end
+end
+
+-- Очистка меню
+function CheatMenuLibrary:Destroy()
+    self.ScreenGui:Destroy()
+    self = nil
+end
+
+return CheatMenuLibrary
