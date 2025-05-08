@@ -301,6 +301,28 @@ local function teleportToClickPosition()
     end
 end
 
+-- Функция Kill All
+local function killAll()
+    local killedCount = 0
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then -- Исключаем локального игрока
+            local character = getCharacter(player)
+            if character then
+                local humanoid = character:FindFirstChild("Humanoid")
+                if humanoid then
+                    humanoid.Health = 0
+                    killedCount = killedCount + 1
+                end
+            end
+        end
+    end
+    if killedCount > 0 then
+        notifyWithCooldown("Killed " .. killedCount .. " player(s)", 3)
+    else
+        notifyWithCooldown("No players could be killed", 3)
+    end
+end
+
 -- Обработка клика для телепортации
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then return end
@@ -462,6 +484,7 @@ otherMovementSection:Toggle("Enable Noclip", toggleNoclip)
 -- Секция: Utility
 local utilitySection = mainTab:Section("Utility")
 utilitySection:Toggle("Enable Anti-AFK", toggleAntiAfk)
+utilitySection:Button("Kill All", killAll) -- Добавляем кнопку Kill All
 
 -- === Вкладка Teleport ===
 -- Секция: Teleport to Player
@@ -504,7 +527,7 @@ local particleEmitter = nil
 local particleColor = Color3.fromRGB(255, 0, 0) -- Цвет частиц по умолчанию (красный)
 local particleRate = 50 -- Скорость появления частиц
 
--- Функция для создания и управления частицами
+-- Ф Evangelion для создания и управления частицами
 local function toggleParticles(state)
     particlesEnabled = state
     local character = getCharacter(LocalPlayer)
@@ -561,7 +584,6 @@ visualEffectsSection:Slider("Particle Rate", 10, 100, function(value)
     end
     notifyWithCooldown("Particle Rate set to: " .. value, 3)
 end)
--- Для ColorPicker используем TextBox для ввода RGB
 visualEffectsSection:TextBox("Particle Color (R,G,B)", "255,0,0", function(input)
     local r, g, b = input:match("(%d+),(%d+),(%d+)")
     if r and g and b then
