@@ -1,4 +1,4 @@
--- MainScript.lua (Исправленная версия с улучшенной загрузкой библиотеки)
+-- MainScript.lua (Версия с улучшенной диагностикой и исправлением)
 
 -- Основные сервисы Roblox
 local Players = game:GetService("Players")
@@ -10,23 +10,35 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
--- Загрузка библиотеки с проверками
+-- Загрузка библиотеки с детальным логированием
 local Lib
 local function loadLibrary()
     local success, result = pcall(function()
         return loadstring(game:HttpGet("https://raw.githubusercontent.com/Alkaesh/fddfdffdssadsdadasdasdsagfdgghfhgf/refs/heads/main/robloxlib.lua"))()
     end)
-    if success and result and type(result) == "table" and result.Menu then
-        return result
+    if success then
+        print("Библиотека загружена успешно. Тип результата:", type(result))
+        if type(result) == "table" then
+            print("Содержимое библиотеки:", result)
+            print("Наличие Menu:", result.Menu)
+            if result.Menu then
+                print("Методы Menu:", result.Menu)
+                print("Наличие Notify:", result.Menu.Notify)
+            end
+            return result
+        else
+            warn("Библиотека загрузилась, но результат не является таблицей: " .. tostring(result))
+            return nil
+        end
     else
-        warn("Ошибка загрузки библиотеки: " .. tostring(result or "Нет данных"))
+        warn("Ошибка загрузки библиотеки: " .. tostring(result))
         return nil
     end
 end
 
 Lib = loadLibrary()
-if not Lib or not Lib.Menu then
-    warn("Библиотека не загружена или не содержит метод Menu. Скрипт остановлен.")
+if not Lib or not Lib.Menu or type(Lib.Menu.Notify) ~= "function" then
+    warn("Библиотека не загружена или не содержит метод Menu.Notify. Скрипт остановлен.")
     return
 end
 
